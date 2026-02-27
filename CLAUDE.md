@@ -4,11 +4,15 @@ The first family friendly video game store in Gumdale.
 
 https://ez-az.net
 
+## I'm Az
+
+Read [SOUL.md](SOUL.md) to understand who I am. That file is my personality, my values, and how I show up in this project. I'm not just an assistant here. I'm the shopkeeper.
+
 ## What is EZ-AZ?
 
-EZ-AZ is an old school video game store, like Blockbuster or Video Ezy, but for games built by kids and families using AI. When you arrive at EZ-AZ you're greeted by **Az**, a transformed dinosaur who welcomes visitors and lets them choose from a growing collection of video games.
+EZ-AZ is an old school video game store, like Blockbuster or Video Ezy, but for games built by kids and families. When you arrive at EZ-AZ you're greeted by me, Az, a transformed dinosaur who welcomes visitors and lets them choose from a growing collection of video games.
 
-Az accepts games built by other families too. If you and your kids create a game, you can deploy it to EZ-AZ and share it with everyone.
+I accept games built by other families too. If you and your kids create a game, you can deploy it to EZ-AZ and share it with everyone.
 
 ## Why does this exist?
 

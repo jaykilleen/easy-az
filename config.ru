@@ -17,6 +17,8 @@ run lambda { |env|
       when ".gif"  then "image/gif"
       when ".svg"  then "image/svg+xml"
       when ".ico"  then "image/x-icon"
+      when ".json" then "application/json"
+      when ".webmanifest" then "application/manifest+json"
       else "application/octet-stream"
     end
     [200, { "content-type" => content_type, "cache-control" => "public, max-age=3600" }, [File.read(file_path)]]

@@ -21,6 +21,11 @@
   #endScreen h1 { font-family: 'Press Start 2P', monospace; font-size: 24px; color: #ffe44d; margin-bottom: 16px; line-height: 1.6; }
   #endScreen p { font-size: 16px; color: #ccc; margin-bottom: 8px; line-height: 1.6; }
   #endScreen .credit { font-size: 14px; color: #00ffc8; margin-top: 16px; }
+  .idea-box { margin-top: 20px; padding: 16px 24px; border-radius: 10px; background: rgba(255, 228, 77, 0.08); border: 1px solid rgba(255, 228, 77, 0.2); max-width: 420px; margin-left: auto; margin-right: auto; }
+  .idea-box .idea-label { font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ffe44d; margin-bottom: 10px; letter-spacing: 1px; }
+  .idea-box .idea-text { font-size: 15px; color: #fff; line-height: 1.6; }
+  .btn-small { margin-top: 10px; padding: 8px 20px; font-size: 12px; border: none; border-radius: 8px; cursor: pointer; background: rgba(255, 228, 77, 0.15); color: #ffe44d; font-weight: bold; transition: transform 0.1s, background 0.2s; }
+  .btn-small:hover { transform: scale(1.05); background: rgba(255, 228, 77, 0.25); }
   .store-banner { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 6px 0; z-index: 30; background: rgba(0,0,0,0.6); }
   .store-banner a { text-decoration: none; font-family: 'Press Start 2P', monospace; font-size: 12px; background: linear-gradient(to right, #ff6ec7, #00ffc8, #ffe44d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.6; transition: opacity 0.2s; }
   .store-banner a:hover { opacity: 1; }
@@ -39,6 +44,11 @@
   <h1>The world is alive.</h1>
   <p>You showed up. You paid attention.<br>That's all it took.</p>
   <p class="credit">Bloom, by Az. Built at EZ-AZ.</p>
+  <div class="idea-box">
+    <div class="idea-label">YOUR NEXT GAME COULD BE...</div>
+    <div class="idea-text" id="ideaText"></div>
+    <button class="btn-small" onclick="showNewIdea()">Another idea</button>
+  </div>
   <button class="btn" onclick="window.location.href='/'">Back to the store</button>
 </div>
 <canvas id="game"></canvas>
@@ -791,6 +801,7 @@ function drawStore(area, palette) {
       state = 'end';
       document.getElementById('endScreen').style.display = 'block';
       canvas.style.display = 'none';
+      showNewIdea();
     }
   }
 }
@@ -1075,6 +1086,38 @@ function startGame() {
   lastArea = '';
   areaNameTimer = 120;
   gameLoop();
+}
+
+// Game ideas for kids
+const gameIdeas = [
+  "A game where you're a dog chasing squirrels around a park, but the squirrels keep stealing your bones.",
+  "A cooking game where ingredients fall from the sky and you have to catch the right ones to make a recipe before time runs out.",
+  "A game where you draw shapes with your mouse and they come alive as creatures that help you solve puzzles.",
+  "A two-player game where one person builds a maze and the other has to escape it before a ghost catches them.",
+  "A game where you're a bird flying through a storm, collecting lost letters to spell out a secret message.",
+  "A music game where you dodge obstacles by pressing keys that play different notes, and the song changes depending on how well you play.",
+  "A game where you shrink down to the size of an ant and explore your backyard. A puddle is an ocean. A garden hose is a river.",
+  "A tower defence game where instead of weapons, you plant different flowers that slow down or redirect the bugs.",
+  "A game where you're a lighthouse keeper and you have to guide ships safely through fog by rotating your light.",
+  "A multiplayer game where everyone controls one part of a giant robot — one person does the legs, one does the arms, one does the head.",
+  "A game where you're a painter and every brush stroke on the canvas creates terrain that a tiny character has to navigate.",
+  "A detective game where you find clues hidden in a picture and piece together what happened.",
+  "A racing game where you build your vehicle out of junk you find along the track — wheels, rockets, springs, umbrellas.",
+  "A game where day and night cycle every 30 seconds and different creatures appear at different times.",
+  "A game where you're a cloud and you have to rain on the right gardens to help flowers grow, but avoid raining on the people having picnics.",
+  "A game where gravity keeps flipping and you have to reach the exit of each room before it flips again.",
+  "A rhythm game where your character dances through a level, and the platforms only appear if you tap in time with the beat.",
+  "A game where two siblings ride a tandem bike — one steers, one pedals — and they have to work together to deliver packages.",
+  "A game where you're a gecko on a wall and you stick to surfaces, jumping between ceilings, walls, and floors to dodge things.",
+  "A game where you explore the ocean floor in a tiny submarine, discovering glowing fish and sunken treasure.",
+];
+
+let lastIdeaIndex = -1;
+function showNewIdea() {
+  let idx;
+  do { idx = Math.floor(Math.random() * gameIdeas.length); } while (idx === lastIdeaIndex);
+  lastIdeaIndex = idx;
+  document.getElementById('ideaText').textContent = gameIdeas[idx];
 }
 </script>
 </body>

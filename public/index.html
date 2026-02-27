@@ -560,6 +560,57 @@
       box-shadow: 0 4px 20px rgba(0, 255, 200, 0.3);
     }
 
+    .built-with {
+      text-align: center;
+      padding: 40px 20px 60px;
+      border-top: 1px solid #1a1a2e;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .built-with h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(10px, 2vw, 14px);
+      color: #ff6ec7;
+      margin-bottom: 16px;
+      line-height: 1.8;
+    }
+
+    .built-with p {
+      font-size: 15px;
+      color: #888;
+      line-height: 1.7;
+      max-width: 480px;
+      margin: 0 auto 12px;
+    }
+
+    .built-with a {
+      color: #f44;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .built-with a:hover {
+      text-decoration: underline;
+    }
+
+    .tech-list {
+      list-style: none;
+      padding: 0;
+      margin: 16px auto 0;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tech-list li {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: #555;
+      letter-spacing: 1px;
+    }
+
     /* Footer */
     .store-footer {
       text-align: center;
@@ -740,6 +791,23 @@
       put it on the shelf for everyone to play.
     </p>
     <a href="/help.html" class="cta-button">Find out how</a>
+  </section>
+
+  <section class="built-with">
+    <h2>Built with vanilla tools</h2>
+    <p>
+      No frameworks. No build steps. Just the good stuff. EZ-AZ runs on
+      <a href="https://www.ruby-lang.org/">Ruby</a>, HTML, CSS and JavaScript.
+      We love Ruby and we love keeping things simple.
+    </p>
+    <ul class="tech-list">
+      <li>Ruby</li>
+      <li>HTML</li>
+      <li>CSS</li>
+      <li>JavaScript</li>
+      <li>Canvas</li>
+      <li>Web Audio</li>
+    </ul>
   </section>
 
   <footer class="store-footer">

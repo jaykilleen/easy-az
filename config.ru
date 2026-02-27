@@ -1,8 +1,26 @@
-use Rack::Static,
-  urls: [""],
-  root: "public",
-  index: "index.html"
+run lambda { |env|
+  path = env["PATH_INFO"]
 
-run lambda { |_env|
-  [200, { "content-type" => "text/html" }, [File.read("public/index.html")]]
+  file_path = File.join("public", path)
+  if path == "/" || path == ""
+    file_path = "public/index.html"
+  end
+
+  if File.exist?(file_path) && !File.directory?(file_path)
+    ext = File.extname(file_path)
+    content_type = case ext
+      when ".html" then "text/html"
+      when ".css"  then "text/css"
+      when ".js"   then "application/javascript"
+      when ".png"  then "image/png"
+      when ".jpg", ".jpeg" then "image/jpeg"
+      when ".gif"  then "image/gif"
+      when ".svg"  then "image/svg+xml"
+      when ".ico"  then "image/x-icon"
+      else "application/octet-stream"
+    end
+    [200, { "content-type" => content_type, "cache-control" => "public, max-age=3600" }, [File.read(file_path)]]
+  else
+    [404, { "content-type" => "text/html" }, ["<h1>404 - Game not found</h1><p><a href='/'>Back to EZ-AZ</a></p>"]]
+  end
 }

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Starter Prompt - EZ-AZ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a12;
+    color: #e0e0e0;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  @keyframes neonFlicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+    20%, 24%, 55% { opacity: 0.6; }
+  }
+
+  .store-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+
+  .store-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(24px, 5vw, 48px);
+    background: linear-gradient(to right, #ff6ec7, #00ffc8, #ffe44d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: neonFlicker 4s infinite;
+    margin-bottom: 8px;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .store-name:hover {
+    opacity: 0.8;
+  }
+
+  .store-tagline {
+    font-size: 14px;
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .content {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  .page-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 22px);
+    color: #ff6ec7;
+    text-align: center;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .page-intro {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #999;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .prompt-box {
+    background: #0d0d1a;
+    border: 2px solid #00ffc8;
+    border-radius: 12px;
+    padding: 32px 28px 28px;
+    position: relative;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #ccc;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #00ffc8;
+    color: #0a0a12;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+
+  .copy-btn:hover {
+    transform: scale(1.05);
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 14px 28px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: #0a0a12;
+    background: #00ffc8;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .back-link:hover {
+    opacity: 0.85;
+  }
+
+  .nav-footer {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .store-footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .store-footer a {
+    color: #00ffc8;
+    text-decoration: none;
+  }
+
+  .store-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+
+<body>
+
+  <header class="store-header">
+    <a href="/" class="store-name">EZ-AZ</a>
+    <p class="store-tagline">The Family Video Game Store</p>
+  </header>
+
+  <main class="content">
+    <h1 class="page-title">AI Starter Prompt</h1>
+    <p class="page-intro">
+      Copy this prompt and paste it into your AI tool to get started building
+      a game for EZ-AZ. Fill in the blanks and you're away.
+    </p>
+
+    <div class="prompt-box" id="starterPrompt">
+      <button class="copy-btn" onclick="copyPrompt()">COPY</button>I want to build a video game for EZ-AZ (ez-az.net), a family friendly video game store where kids and families share games they've built. Games are submitted via pull request on GitHub and displayed on a virtual shelf for anyone to play.
+
+My game idea: [DESCRIBE YOUR GAME - what's the goal, who are the characters, what makes it fun?]
+
+My gamer name: [YOUR COOL GAMER PSEUDONYM]
+
+Here are the rules for EZ-AZ games:
+
+1. The game must be a single HTML file. All code, styles, graphics and sound in one file. No external dependencies, no images, no audio files, no libraries.
+2. Use HTML5 Canvas for all graphics. Draw everything with canvas API calls.
+3. Use Web Audio API for sound effects and music. Generate all audio procedurally.
+4. Use Speech Synthesis API if you want robot voices or singing.
+5. The game must be family friendly. No violence beyond cartoon-level (space ships, dodging, etc).
+6. It must work in a modern web browser (Chrome, Firefox, Safari, Edge).
+7. The page should have a dark background (#000) and the canvas centred on screen.
+
+Technical requirements:
+- All CSS goes in a single &lt;style&gt; tag in the &lt;head&gt;
+- All JavaScript goes in a single &lt;script&gt; tag before &lt;/body&gt;
+- The canvas should be a sensible size (around 700x800 works well)
+- Include a start screen overlay so the game doesn't auto-play
+- Include a game over screen with the player's score
+- Use requestAnimationFrame for the game loop
+- Handle keyboard input with keydown/keyup event listeners
+
+Please help me build this step by step:
+1. Start with a basic HTML file with canvas, a start screen overlay and a game loop. Get my main character on screen with keyboard movement.
+2. Add the core gameplay mechanic (dodging, shooting, jumping, whatever fits my idea).
+3. Add enemies, obstacles, or challenges.
+4. Add collision detection and scoring.
+5. Add sound effects using Web Audio API (oscillators and noise).
+6. Add background music using Web Audio API.
+7. Add a game over screen that shows the final score.
+8. Add power-ups or extra features to make it more fun.
+9. Polish the visuals with particle effects, screen shake, glowing colours.
+10. Final review: make sure everything is in one file and works on its own.
+
+After each step, show me the complete updated HTML file so I can test it in my browser.
+
+Let's start with step 1. Keep it simple so I can see something working straight away, then we'll build from there.</div>
+  </main>
+
+  <nav class="nav-footer">
+    <a href="/help.html" class="back-link">Back to submit info</a>
+  </nav>
+
+  <footer class="store-footer">
+    Built by Charlie and Cooper (aged 8), with their Dad Jay helping them learn to work with AI.<br>
+    Gumdale's first family friendly video game store.
+  </footer>
+
+  <script>
+    function copyPrompt() {
+      const box = document.getElementById('starterPrompt');
+      const text = box.textContent.replace('COPY', '').trim();
+      navigator.clipboard.writeText(text).then(function() {
+        const btn = box.querySelector('.copy-btn');
+        btn.textContent = 'COPIED!';
+        setTimeout(function() { btn.textContent = 'COPY'; }, 2000);
+      });
+    }
+  </script>
+
+</body>
+</html>

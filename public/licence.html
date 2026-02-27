@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Licence - EZ-AZ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a12;
+    color: #e0e0e0;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  @keyframes neonFlicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+    20%, 24%, 55% { opacity: 0.6; }
+  }
+
+  .store-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+
+  .store-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(24px, 5vw, 48px);
+    background: linear-gradient(to right, #ff6ec7, #00ffc8, #ffe44d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: neonFlicker 4s infinite;
+    margin-bottom: 8px;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .store-name:hover {
+    opacity: 0.8;
+  }
+
+  .store-tagline {
+    font-size: 14px;
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .content {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  .page-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 22px);
+    color: #ff6ec7;
+    text-align: center;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  .licence-text {
+    background: #0d0d1a;
+    border: 2px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 32px 28px;
+    font-size: 14px;
+    line-height: 2;
+    color: #ccc;
+    margin-bottom: 32px;
+  }
+
+  .licence-text p {
+    margin-bottom: 16px;
+  }
+
+  .licence-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .licence-text .disclaimer {
+    text-transform: uppercase;
+    font-size: 12px;
+    color: #999;
+  }
+
+  .licence-info {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #999;
+    margin-bottom: 12px;
+  }
+
+  .licence-info a {
+    color: #00ffc8;
+    text-decoration: none;
+  }
+
+  .licence-info a:hover {
+    text-decoration: underline;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 14px 28px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: #0a0a12;
+    background: #00ffc8;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .back-link:hover {
+    opacity: 0.85;
+  }
+
+  .nav-footer {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .store-footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .store-footer a {
+    color: #00ffc8;
+    text-decoration: none;
+  }
+
+  .store-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+
+<body>
+
+  <header class="store-header">
+    <a href="/" class="store-name">EZ-AZ</a>
+    <p class="store-tagline">The Family Video Game Store</p>
+  </header>
+
+  <main class="content">
+    <h1 class="page-title">Licence</h1>
+
+    <div class="licence-text">
+      <p>Copyright &copy; 2026, Jay Killeen.</p>
+
+      <p>
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+      </p>
+
+      <p>
+        1. The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+      </p>
+
+      <p>
+        2. No licensee or downstream recipient may use the Software (including any
+        modified or derivative versions) to directly compete with the original
+        Licensor by offering it to third parties as a hosted, managed, or
+        Software-as-a-Service (SaaS) product or cloud service where the primary
+        value of the service is the functionality of the Software itself.
+      </p>
+
+      <p class="disclaimer">
+        The Software is provided "as is", without warranty of any kind, express or
+        implied, including but not limited to the warranties of merchantability,
+        fitness for a particular purpose and noninfringement. In no event shall the
+        authors or copyright holders be liable for any claim, damages or other
+        liability, whether in an action of contract, tort or otherwise, arising from,
+        out of or in connection with the Software or the use or other dealings in the
+        Software.
+      </p>
+    </div>
+
+    <p class="licence-info">
+      This project uses the <a href="https://osaasy.dev/">O'SaaSy Licence</a>,
+      created by <a href="https://world.hey.com/dhh/the-o-saasy-license-336c5c8f">DHH</a>
+      at <a href="https://37signals.com/">37signals</a>. It's the MIT licence with
+      SaaS rights reserved for the copyright holder. You're free to use, modify and
+      learn from the code. You just can't repackage it as a competing hosted service.
+    </p>
+
+    <p class="licence-info">
+      Games submitted by other families remain the work of their creators.
+    </p>
+  </main>
+
+  <nav class="nav-footer">
+    <a href="/" class="back-link">Back to the store</a>
+  </nav>
+
+  <footer class="store-footer">
+    Built by Charlie and Cooper (aged 8), with their Dad Jay helping them learn to work with AI.<br>
+    Gumdale's first family friendly video game store.
+  </footer>
+
+</body>
+</html>

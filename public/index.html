@@ -173,6 +173,7 @@
       height: 55px;
       background: #00cc88;
       border-radius: 30px 30px 20px 20px;
+      cursor: pointer;
     }
 
     /* Dino snout */
@@ -577,6 +578,23 @@
     .store-footer a:hover {
       text-decoration: underline;
     }
+
+    .az-mouth.talking {
+      height: 14px;
+      border-bottom: none;
+      background: #006644;
+      border-radius: 4px 4px 12px 12px;
+      animation: talk 0.25s infinite alternate;
+    }
+
+    @keyframes talk {
+      from { height: 8px; }
+      to { height: 14px; }
+    }
+
+    .az-head:hover {
+      background: #00ddaa;
+    }
   </style>
 </head>
 
@@ -632,7 +650,8 @@
       <p>
         Welcome to EZ-AZ! I'm Az, your friendly neighbourhood dinosaur.
         Grab a game off the shelf and have a go. Everything here was
-        built by kids and their families using AI. Pretty cool, right?
+        built by kids and their families. Some use AI, some are hand
+        coded from scratch. Pretty cool, right?
       </p>
     </div>
   </section>
@@ -726,6 +745,7 @@
   <footer class="store-footer">
     Built by Cooper and Charlie (aged 8), with Jay helping them learn to work with AI.<br>
     Gumdale's first family friendly video game store. Launched 28th February 2026.<br>
+    <a href="/licence.html">Licence</a>
   </footer>
 
   <script>
@@ -874,6 +894,61 @@
       ctx.strokeStyle = '#ffe44d';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(6, 12, 20, 20);
+    })();
+  </script>
+
+  <script>
+    // Az speaks when you click his head
+    (function() {
+      const azLines = [
+        "Welcome to EZ-AZ! Grab a game and have a blast!",
+        "Did you know? Every game here was made by kids!",
+        "Hey! You should make a game and put it on the shelf!",
+        "I'm Az! I used to be a regular dinosaur, but then I discovered video games.",
+        "Pro tip. Start your game simple, then make it awesome.",
+        "Two players are better than one. Grab a friend!",
+        "You don't need to buy games when you can build them yourself!",
+        "Charlie and Cooper built Space Dodge. What will you build?",
+        "I love this job. I get to play games all day.",
+        "The shelf has room for your game. Just saying.",
+        "Every great game starts with a wild idea. What's yours?",
+        "Hand coded or AI assisted, we love all games here!",
+        "Rawr! That means welcome in dinosaur.",
+        "Fun fact. I'm the only dinosaur who runs a video game store.",
+        "Boss fights are my favourite part. Don't tell anyone.",
+        "If you can imagine it, you can build it!",
+        "Come up with a cool gamer name. Every legend needs one.",
+        "The Void King thinks he's tough. Prove him wrong!",
+      ];
+
+      let lastIndex = -1;
+      const head = document.querySelector('.az-head');
+      const mouth = document.querySelector('.az-mouth');
+      const bubble = document.querySelector('.speech-bubble p:last-child');
+
+      head.addEventListener('click', function() {
+        if (speechSynthesis.speaking) return;
+
+        let index;
+        do {
+          index = Math.floor(Math.random() * azLines.length);
+        } while (index === lastIndex && azLines.length > 1);
+        lastIndex = index;
+
+        const line = azLines[index];
+        bubble.textContent = line;
+
+        const utterance = new SpeechSynthesisUtterance(line);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.4;
+
+        mouth.classList.add('talking');
+        utterance.onend = function() {
+          mouth.classList.remove('talking');
+        };
+
+        speechSynthesis.speak(utterance);
+      });
     })();
   </script>
 

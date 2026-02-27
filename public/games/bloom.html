@@ -26,6 +26,20 @@
   .idea-box .idea-text { font-size: 15px; color: #fff; line-height: 1.6; }
   .btn-small { margin-top: 10px; padding: 8px 20px; font-size: 12px; border: none; border-radius: 8px; cursor: pointer; background: rgba(255, 228, 77, 0.15); color: #ffe44d; font-weight: bold; transition: transform 0.1s, background 0.2s; }
   .btn-small:hover { transform: scale(1.05); background: rgba(255, 228, 77, 0.25); }
+  .btn-quit { margin-top: 10px; padding: 14px 40px; font-size: 18px; border: none; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, #cc4444, #aa2222); color: white; font-weight: bold; transition: transform 0.1s; }
+  .btn-quit:hover { transform: scale(1.08); }
+  #quitDialog { display: none; }
+  #quitDialog h1 { font-family: 'Press Start 2P', monospace; font-size: 24px; color: #fff; margin-bottom: 16px; }
+  #quitDialog p { font-size: 18px; color: #aaa; margin-bottom: 8px; font-family: 'Press Start 2P', monospace; }
+  .time-display { margin: 16px 0; }
+  .time-label { display: block; font-family: 'Press Start 2P', monospace; font-size: 9px; color: #aaa; margin-bottom: 6px; letter-spacing: 1px; }
+  .time-value { font-family: 'Press Start 2P', monospace; font-size: 20px; color: #00ffc8; }
+  .leaderboard { margin: 16px auto; max-width: 360px; text-align: left; }
+  .leaderboard-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #ffe44d; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .lb-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 13px; color: #aaa; font-family: 'Press Start 2P', monospace; }
+  .lb-row.highlight { color: #00ffc8; background: rgba(0, 255, 200, 0.08); border-radius: 4px; }
+  .lb-name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 10px; font-size: 14px; border-radius: 6px; width: 140px; font-family: 'Press Start 2P', monospace; margin-right: 8px; text-transform: uppercase; }
+  .lb-name-input::placeholder { color: rgba(255,255,255,0.3); font-size: 10px; }
   .store-banner { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 6px 0; z-index: 30; background: rgba(0,0,0,0.6); }
   .store-banner a { text-decoration: none; font-family: 'Press Start 2P', monospace; font-size: 12px; background: linear-gradient(to right, #ff6ec7, #00ffc8, #ffe44d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.6; transition: opacity 0.2s; }
   .store-banner a:hover { opacity: 1; }
@@ -38,11 +52,26 @@
   <p class="byline">By Az</p>
   <p>The world has lost its colour and music.<br>Find the hearts. Bring it back to life.</p>
   <button class="btn" onclick="startGame()">Play</button>
-  <div class="info">Arrow keys or WASD to move<br>Hold Shift or Space to sprint</div>
+  <div class="info">Arrow keys or WASD to move<br>Hold Shift or Space to sprint<br>Escape to pause</div>
+</div>
+<div id="quitDialog" class="overlay">
+  <h1>Paused</h1>
+  <p id="pauseTimeDisplay"></p>
+  <button class="btn" onclick="resumeGame()">Resume</button>
+  <button class="btn-quit" onclick="quitGame()">Quit</button>
 </div>
 <div id="endScreen" class="overlay">
   <h1>The world is alive.</h1>
   <p>You showed up. You paid attention.<br>That's all it took.</p>
+  <div class="time-display">
+    <span class="time-label">YOUR TIME</span>
+    <span class="time-value" id="finalTimeDisplay"></span>
+  </div>
+  <div id="nameEntrySection" style="display:none; margin-bottom: 12px;">
+    <input type="text" id="nameInput" class="lb-name-input" maxlength="10" placeholder="NAME">
+    <button class="btn-small" onclick="saveScore()">Save</button>
+  </div>
+  <div class="leaderboard" id="leaderboardSection"></div>
   <p class="credit">Bloom, by Az. Built at EZ-AZ.</p>
   <div class="idea-box">
     <div class="idea-label">YOUR NEXT GAME COULD BE...</div>
@@ -58,10 +87,14 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width = 700, H = canvas.height = 800;
 
 // Game state
-let state = 'title'; // title, playing, end
+let state = 'title'; // title, playing, paused, end
 let player = { x: 350, y: 400, w: 24, h: 32, facing: 1, frame: 0, frameTimer: 0, moving: false };
 let keys = {};
 const SPEED = 3;
+let gameStartTime = 0;
+let totalPausedTime = 0;
+let pausedAt = 0;
+let finalTime = 0;
 let hearts = { clearing: false, forest: false, peaks: false, lake: false, caves: false };
 let heartCount = 0;
 let currentArea = 'clearing';
@@ -148,8 +181,9 @@ function initAreas() {
       // Water pillars narrowing the bridge approach
       { x: 280, y: 280, w: 40, h: 60 },
       { x: 380, y: 280, w: 40, h: 60 },
-      // Water below bridge
-      { x: 280, y: 420, w: 140, h: 230 },
+      // Water below bridge — split to keep the channel open
+      { x: 280, y: 420, w: 40, h: 230 },
+      { x: 380, y: 420, w: 40, h: 230 },
     ],
     heart: { x: 350, y: 370, collected: false },
     colourLerp: 0, bloomRadius: 0, bloomOrigin: null,
@@ -799,9 +833,12 @@ function drawStore(area, palette) {
   if (player.y > 370 && player.y < 460 && player.x > 280 && player.x < 420) {
     if (state === 'playing') {
       state = 'end';
+      finalTime = performance.now() - gameStartTime - totalPausedTime;
+      document.getElementById('finalTimeDisplay').textContent = formatTime(finalTime);
       document.getElementById('endScreen').style.display = 'block';
       canvas.style.display = 'none';
       showNewIdea();
+      showLeaderboard();
     }
   }
 }
@@ -960,6 +997,13 @@ function drawPlayer() {
 }
 
 function drawHUD() {
+  // Timer top-left
+  const elapsed = performance.now() - gameStartTime - totalPausedTime;
+  ctx.font = '12px "Press Start 2P", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.fillText(formatTime(elapsed), 10, 24);
+
   // Heart counter top-right
   const startX = W - 30;
   const startY = 20;
@@ -1005,6 +1049,11 @@ document.addEventListener('keydown', function (e) {
   // Prevent scrolling
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
     e.preventDefault();
+  }
+  // Escape to pause/resume
+  if (e.key === 'Escape') {
+    if (state === 'playing') pauseGame();
+    else if (state === 'paused') resumeGame();
   }
 });
 document.addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
@@ -1072,9 +1121,16 @@ function gameLoop() {
 function startGame() {
   state = 'playing';
   document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('endScreen').style.display = 'none';
+  document.getElementById('quitDialog').style.display = 'none';
+  canvas.style.display = 'block';
   initAreas();
   initAudio();
   nextBeatTime = audioCtx.currentTime;
+  gameStartTime = performance.now();
+  totalPausedTime = 0;
+  pausedAt = 0;
+  finalTime = 0;
   player.x = 350;
   player.y = 500;
   currentArea = 'clearing';
@@ -1086,6 +1142,105 @@ function startGame() {
   lastArea = '';
   areaNameTimer = 120;
   gameLoop();
+}
+
+// Time formatting
+function formatTime(ms) {
+  const totalSec = Math.max(0, ms / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = Math.floor(totalSec % 60);
+  const millis = Math.floor(ms % 1000);
+  return String(mins).padStart(2, '0') + ':' +
+         String(secs).padStart(2, '0') + '.' +
+         String(millis).padStart(3, '0');
+}
+
+// Pause / Resume / Quit
+function pauseGame() {
+  state = 'paused';
+  pausedAt = performance.now();
+  const elapsed = pausedAt - gameStartTime - totalPausedTime;
+  document.getElementById('pauseTimeDisplay').textContent = formatTime(elapsed);
+  document.getElementById('quitDialog').style.display = 'block';
+  canvas.style.display = 'none';
+}
+
+function resumeGame() {
+  totalPausedTime += performance.now() - pausedAt;
+  pausedAt = 0;
+  state = 'playing';
+  document.getElementById('quitDialog').style.display = 'none';
+  canvas.style.display = 'block';
+  gameLoop();
+}
+
+function quitGame() {
+  state = 'title';
+  document.getElementById('quitDialog').style.display = 'none';
+  document.getElementById('titleScreen').style.display = 'block';
+  canvas.style.display = 'none';
+}
+
+// Leaderboard
+function getLeaderboard() {
+  try {
+    return JSON.parse(localStorage.getItem('bloom-leaderboard') || '[]');
+  } catch (e) { return []; }
+}
+
+function saveLeaderboard(board) {
+  localStorage.setItem('bloom-leaderboard', JSON.stringify(board));
+}
+
+function showLeaderboard() {
+  const board = getLeaderboard();
+  const section = document.getElementById('leaderboardSection');
+  const nameEntry = document.getElementById('nameEntrySection');
+
+  // Check if this is a top-10 time
+  const isTopScore = board.length < 10 || finalTime < board[board.length - 1].time;
+
+  if (isTopScore) {
+    nameEntry.style.display = 'block';
+    document.getElementById('nameInput').value = '';
+    document.getElementById('nameInput').focus();
+  } else {
+    nameEntry.style.display = 'none';
+  }
+
+  renderLeaderboard(board, -1);
+}
+
+function saveScore() {
+  const input = document.getElementById('nameInput');
+  const name = (input.value.trim() || 'ANON').toUpperCase().slice(0, 10);
+  const board = getLeaderboard();
+
+  board.push({ name: name, time: finalTime });
+  board.sort(function (a, b) { return a.time - b.time; });
+  if (board.length > 10) board.length = 10;
+
+  saveLeaderboard(board);
+  document.getElementById('nameEntrySection').style.display = 'none';
+
+  const playerIdx = board.findIndex(function (e) { return e.time === finalTime && e.name === name; });
+  renderLeaderboard(board, playerIdx);
+}
+
+function renderLeaderboard(board, highlightIdx) {
+  const section = document.getElementById('leaderboardSection');
+  if (board.length === 0) {
+    section.innerHTML = '';
+    return;
+  }
+  let html = '<div class="leaderboard-title">LEADERBOARD</div>';
+  board.forEach(function (entry, i) {
+    const cls = i === highlightIdx ? 'lb-row highlight' : 'lb-row';
+    html += '<div class="' + cls + '">' +
+            '<span>' + (i + 1) + '. ' + entry.name + '</span>' +
+            '<span>' + formatTime(entry.time) + '</span></div>';
+  });
+  section.innerHTML = html;
 }
 
 // Game ideas for kids

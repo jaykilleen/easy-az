@@ -1,5 +1,22 @@
+require "json"
+
+COUNTER_FILE ||= File.expand_path("data/counter.json", __dir__)
+
 run lambda { |env|
   path = env["PATH_INFO"]
+
+  if path == "/counter" && env["REQUEST_METHOD"] == "GET"
+    count = 0
+    File.open(COUNTER_FILE, File::RDWR | File::CREAT) do |f|
+      f.flock(File::LOCK_EX)
+      data = f.read
+      count = (JSON.parse(data)["count"] rescue 0) + 1
+      f.rewind
+      f.write(JSON.generate({ "count" => count }))
+      f.truncate(f.pos)
+    end
+    next [200, { "content-type" => "application/json", "cache-control" => "no-store" }, [JSON.generate({ "count" => count })]]
+  end
 
   file_path = File.join("public", path)
   if path == "/" || path == ""

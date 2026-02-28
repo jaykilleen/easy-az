@@ -653,6 +653,35 @@
       letter-spacing: 1px;
     }
 
+    /* Visitor counter */
+    .visitor-counter {
+      text-align: center;
+      padding: 30px 20px;
+      border-top: 1px solid #1a1a2e;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .counter-display {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: #33ff33;
+      background: #0a0a0a;
+      border: 1px solid #1a3a1a;
+      padding: 10px 20px;
+      border-radius: 4px;
+      letter-spacing: 3px;
+      text-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+    }
+
+    .counter-label {
+      font-size: 11px;
+      color: #555;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
     /* Footer */
     .store-footer {
       text-align: center;
@@ -859,6 +888,11 @@
       <li>Canvas</li>
       <li>Web Audio</li>
     </ul>
+  </section>
+
+  <section class="visitor-counter" id="visitorCounter" style="display:none;">
+    <div class="counter-display" id="counterDisplay"></div>
+    <p class="counter-label">visitors to the store</p>
   </section>
 
   <footer class="store-footer">
@@ -1238,6 +1272,17 @@
         localStorage.setItem('ez-az-version', current);
       }
     })();
+  </script>
+
+  <script>
+    // Visitor counter
+    fetch('/counter')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('counterDisplay').textContent = data.count.toLocaleString();
+        document.getElementById('visitorCounter').style.display = '';
+      })
+      .catch(function() {});
   </script>
 
   <script>

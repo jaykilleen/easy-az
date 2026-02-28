@@ -829,6 +829,13 @@ function drawStore(area, palette) {
   ctx.fillStyle = `rgba(255, 110, 199, ${0.6 * flicker})`;
   ctx.fillText('OPEN', W / 2, 320);
 
+  // Pulsing hint to approach counter
+  const hintPulse = 0.5 + Math.sin(time * 2) * 0.3;
+  ctx.font = '14px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = `rgba(255, 200, 150, ${hintPulse})`;
+  ctx.fillText('Come say hi!', W / 2, 380);
+
   // Check if player reached counter for end state
   if (player.y > 370 && player.y < 460 && player.x > 280 && player.x < 420) {
     if (state === 'playing') {

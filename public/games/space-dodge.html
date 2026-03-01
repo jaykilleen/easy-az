@@ -88,12 +88,32 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width = 700, H = canvas.height = 800;
 
 // ===== LEADERBOARD =====
+let leaderboardCache = [];
 function getLB() { try { return JSON.parse(localStorage.getItem('charlieLeaderboard')) || []; } catch { return []; } }
 function saveLB(lb) { localStorage.setItem('charlieLeaderboard', JSON.stringify(lb)); }
-function qualifies(s) { const lb = getLB(); return lb.length < 10 || s > lb[lb.length-1].score; }
-function addLB(name, s) { const lb = getLB(); lb.push({name:name.toUpperCase(),score:s}); lb.sort((a,b)=>b.score-a.score); lb.length = Math.min(lb.length,10); saveLB(lb); }
+async function fetchLB() {
+  try {
+    const r = await fetch('/api/scores?game=space-dodge');
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    leaderboardCache = d.scores.map(s => ({name:s.name,score:s.value}));
+    saveLB(leaderboardCache);
+  } catch { leaderboardCache = getLB(); }
+  return leaderboardCache;
+}
+function qualifies(s) { return leaderboardCache.length < 10 || s > leaderboardCache[leaderboardCache.length-1].score; }
+async function addLB(name, s) {
+  name = (name || 'C&C').toUpperCase().slice(0,12);
+  try {
+    const r = await fetch('/api/scores', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'space-dodge',name,value:s})});
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    leaderboardCache = d.scores.map(e => ({name:e.name,score:e.value}));
+    saveLB(leaderboardCache);
+  } catch { const lb = getLB(); lb.push({name,score:s}); lb.sort((a,b)=>b.score-a.score); lb.length = Math.min(lb.length,10); saveLB(lb); leaderboardCache = lb; }
+}
 function renderLB(id, hl) {
-  const lb = getLB(), el = document.getElementById(id);
+  const lb = leaderboardCache, el = document.getElementById(id);
   if (!lb.length) { el.innerHTML=''; return; }
   let h = '<div id="leaderboard"><h2>LEADERBOARD</h2><ol>', done=false;
   lb.forEach(e => { const y=!done&&hl!==undefined&&e.score===hl; if(y)done=true; h+=`<li class="${y?'you':''}">${e.name} <span class="s">${e.score}</span></li>`; });
@@ -157,7 +177,7 @@ function quitGame(){
 }
 document.getElementById('quitYes').addEventListener('click', quitGame);
 document.getElementById('quitNo').addEventListener('click', resumeGame);
-renderLB('leaderboardStart');
+fetchLB().then(() => renderLB('leaderboardStart'));
 
 function createPlayer(id,x,col,name) { return {id,x,y:H-90,w:32,h:40,baseSpeed:6,colour:col,name,alive:true,shootCooldown:0,invincible:0}; }
 
@@ -819,10 +839,10 @@ function update() {
 
 function killPlayer(p){
   p.alive=false;playExplosionSFX();spawnParticles(p.x,p.y,p.colour,30);spawnParticles(p.x,p.y,'#ff0',15);showMsg(p.name+' DOWN!',p.colour,60);
-  if(!players.some(pl=>pl.alive)){stopMusic();const lb=getLB();highScore=lb.length>0?lb[0].score:0;if(score>highScore)highScore=score;pendingScore=score;
-    setTimeout(()=>{if(qualifies(score)){document.getElementById('nameEntry').style.display='block';document.getElementById('nameScoreMsg').textContent=`You scored ${score}!`;const inp=document.getElementById('nameInput');inp.value='';inp.focus();}else{document.getElementById('gameOver').style.display='block';document.getElementById('finalScore').textContent=`Score: ${score}`;renderLB('leaderboardEnd');}},1000);}
+  if(!players.some(pl=>pl.alive)){stopMusic();pendingScore=score;
+    setTimeout(()=>{fetchLB().then(()=>{highScore=leaderboardCache.length>0?leaderboardCache[0].score:0;if(score>highScore)highScore=score;if(qualifies(score)){document.getElementById('nameEntry').style.display='block';document.getElementById('nameScoreMsg').textContent=`You scored ${score}!`;const inp=document.getElementById('nameInput');inp.value='';inp.focus();}else{document.getElementById('gameOver').style.display='block';document.getElementById('finalScore').textContent=`Score: ${score}`;renderLB('leaderboardEnd');}});},1000);}
 }
-function submitName(){const inp=document.getElementById('nameInput');addLB(inp.value.trim()||'C&C',pendingScore);document.getElementById('nameEntry').style.display='none';document.getElementById('gameOver').style.display='block';document.getElementById('finalScore').textContent=`Score: ${pendingScore}`;renderLB('leaderboardEnd',pendingScore);renderLB('leaderboardStart');}
+async function submitName(){const inp=document.getElementById('nameInput');await addLB(inp.value.trim()||'C&C',pendingScore);document.getElementById('nameEntry').style.display='none';document.getElementById('gameOver').style.display='block';document.getElementById('finalScore').textContent=`Score: ${pendingScore}`;renderLB('leaderboardEnd',pendingScore);renderLB('leaderboardStart');}
 document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitName();});
 
 // ===== DRAW =====
@@ -854,7 +874,7 @@ function draw() {
   ctx.fillStyle=w.accent;ctx.font='bold 12px sans-serif';
   ctx.fillText(`WORLD ${currentWorld+1}: ${w.name}`,16,boss?64:48);
   ctx.fillStyle='#aaa';ctx.font='14px sans-serif';
-  ctx.fillText(`Best: ${Math.max(highScore,getLB().length>0?getLB()[0].score:0)}`,16,boss?80:64);
+  ctx.fillText(`Best: ${Math.max(highScore,leaderboardCache.length>0?leaderboardCache[0].score:0)}`,16,boss?80:64);
 
   ctx.textAlign='right';
   players.forEach((p,i)=>{ctx.fillStyle=p.alive?p.colour:'#555';ctx.font='bold 13px sans-serif';ctx.fillText(`${p.name} ${p.alive?'ALIVE':'DOWN'}`,W-16,30+i*20);});

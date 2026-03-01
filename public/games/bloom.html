@@ -1204,17 +1204,28 @@ function getLeaderboard() {
   } catch (e) { return []; }
 }
 
-function saveLeaderboard(board) {
+function saveLocalLeaderboard(board) {
   localStorage.setItem('bloom-leaderboard', JSON.stringify(board));
 }
 
-function showLeaderboard() {
-  const board = getLeaderboard();
-  const section = document.getElementById('leaderboardSection');
-  const nameEntry = document.getElementById('nameEntrySection');
+async function fetchLeaderboard() {
+  try {
+    var r = await fetch('/api/scores?game=bloom');
+    if (!r.ok) throw new Error();
+    var d = await r.json();
+    var board = d.scores.map(function (s) { return {name: s.name, time: s.value}; });
+    saveLocalLeaderboard(board);
+    return board;
+  } catch (e) {
+    return getLeaderboard();
+  }
+}
 
-  // Check if this is a top-10 time
-  const isTopScore = board.length < 10 || finalTime < board[board.length - 1].time;
+async function showLeaderboard() {
+  var board = await fetchLeaderboard();
+  var nameEntry = document.getElementById('nameEntrySection');
+
+  var isTopScore = board.length < 10 || finalTime < board[board.length - 1].time;
 
   if (isTopScore) {
     nameEntry.style.display = 'block';
@@ -1227,31 +1238,38 @@ function showLeaderboard() {
   renderLeaderboard(board, -1);
 }
 
-function saveScore() {
-  const input = document.getElementById('nameInput');
-  const name = (input.value.trim() || 'ANON').toUpperCase().slice(0, 10);
-  const board = getLeaderboard();
-
-  board.push({ name: name, time: finalTime });
-  board.sort(function (a, b) { return a.time - b.time; });
-  if (board.length > 10) board.length = 10;
-
-  saveLeaderboard(board);
+async function saveScore() {
+  var input = document.getElementById('nameInput');
+  var name = (input.value.trim() || 'ANON').toUpperCase().slice(0, 12);
+  var board;
+  try {
+    var r = await fetch('/api/scores', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({game: 'bloom', name: name, value: Math.round(finalTime)})});
+    if (!r.ok) throw new Error();
+    var d = await r.json();
+    board = d.scores.map(function (s) { return {name: s.name, time: s.value}; });
+    saveLocalLeaderboard(board);
+  } catch (e) {
+    board = getLeaderboard();
+    board.push({name: name, time: Math.round(finalTime)});
+    board.sort(function (a, b) { return a.time - b.time; });
+    if (board.length > 10) board.length = 10;
+    saveLocalLeaderboard(board);
+  }
   document.getElementById('nameEntrySection').style.display = 'none';
 
-  const playerIdx = board.findIndex(function (e) { return e.time === finalTime && e.name === name; });
+  var playerIdx = board.findIndex(function (e) { return e.time === Math.round(finalTime) && e.name === name; });
   renderLeaderboard(board, playerIdx);
 }
 
 function renderLeaderboard(board, highlightIdx) {
-  const section = document.getElementById('leaderboardSection');
+  var section = document.getElementById('leaderboardSection');
   if (board.length === 0) {
     section.innerHTML = '';
     return;
   }
-  let html = '<div class="leaderboard-title">LEADERBOARD</div>';
+  var html = '<div class="leaderboard-title">LEADERBOARD</div>';
   board.forEach(function (entry, i) {
-    const cls = i === highlightIdx ? 'lb-row highlight' : 'lb-row';
+    var cls = i === highlightIdx ? 'lb-row highlight' : 'lb-row';
     html += '<div class="' + cls + '">' +
             '<span>' + (i + 1) + '. ' + entry.name + '</span>' +
             '<span>' + formatTime(entry.time) + '</span></div>';

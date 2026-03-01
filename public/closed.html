@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EZ-AZ - We're Closed!</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ffc8">
+  <link rel="apple-touch-icon" href="/icons/az-192.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a12;
+      color: #e0e0e0;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* Neon CLOSED sign */
+    .closed-sign {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(32px, 8vw, 64px);
+      color: #ff4444;
+      text-shadow:
+        0 0 10px #ff4444,
+        0 0 20px #ff4444,
+        0 0 40px #ff0000,
+        0 0 80px #ff0000;
+      animation: closedFlicker 3s infinite;
+      margin-bottom: 40px;
+      letter-spacing: 6px;
+    }
+
+    @keyframes closedFlicker {
+      0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        opacity: 1;
+        text-shadow:
+          0 0 10px #ff4444,
+          0 0 20px #ff4444,
+          0 0 40px #ff0000,
+          0 0 80px #ff0000;
+      }
+      20%, 24%, 55% {
+        opacity: 0.5;
+        text-shadow:
+          0 0 5px #ff4444,
+          0 0 10px #ff0000;
+      }
+    }
+
+    /* Az the dinosaur */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes blink {
+      0%, 45%, 55%, 100% { transform: scaleY(0); }
+      50% { transform: scaleY(1); }
+    }
+
+    @keyframes tailWag {
+      0%, 100% { transform: rotate(-10deg); }
+      50% { transform: rotate(10deg); }
+    }
+
+    .az-container {
+      animation: float 3s ease-in-out infinite;
+      margin-bottom: 30px;
+    }
+
+    .az-dino {
+      position: relative;
+      width: 120px;
+      height: 140px;
+    }
+
+    .az-body {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 80px;
+      background: #00cc88;
+      border-radius: 35px 35px 20px 20px;
+    }
+
+    .az-belly {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 46px;
+      height: 50px;
+      background: #66eebb;
+      border-radius: 23px 23px 16px 16px;
+    }
+
+    .az-head {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 55px;
+      background: #00cc88;
+      border-radius: 30px 30px 20px 20px;
+    }
+
+    .az-snout {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 20px;
+      background: #00bb77;
+      border-radius: 20px;
+    }
+
+    .az-nostril {
+      position: absolute;
+      top: 5px;
+      width: 5px;
+      height: 4px;
+      background: #008855;
+      border-radius: 50%;
+    }
+
+    .az-nostril.left { left: 10px; }
+    .az-nostril.right { right: 10px; }
+
+    .az-mouth {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 10px;
+      border-bottom: 3px solid #008855;
+      border-radius: 0 0 12px 12px;
+    }
+
+    .az-eye {
+      position: absolute;
+      top: 14px;
+      width: 16px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .az-eye.left { left: 8px; }
+    .az-eye.right { right: 8px; }
+
+    .az-pupil {
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 9px;
+      background: #111;
+      border-radius: 50%;
+    }
+
+    .az-eyelid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #00cc88;
+      transform-origin: top center;
+      animation: blink 4s ease-in-out infinite;
+      transform: scaleY(0);
+    }
+
+    .az-spikes {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 3px;
+    }
+
+    .az-spike {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 12px solid #00aa66;
+    }
+
+    .az-arm {
+      position: absolute;
+      bottom: 40px;
+      width: 18px;
+      height: 30px;
+      background: #00cc88;
+      border-radius: 10px;
+    }
+
+    .az-arm.left { left: -6px; transform: rotate(20deg); }
+    .az-arm.right { right: -6px; transform: rotate(-20deg); }
+
+    .az-foot {
+      position: absolute;
+      bottom: -6px;
+      width: 24px;
+      height: 12px;
+      background: #00bb77;
+      border-radius: 12px 12px 8px 8px;
+    }
+
+    .az-foot.left { left: 8px; }
+    .az-foot.right { right: 8px; }
+
+    .az-tail {
+      position: absolute;
+      bottom: 16px;
+      right: -20px;
+      width: 30px;
+      height: 14px;
+      background: #00cc88;
+      border-radius: 0 14px 14px 0;
+      transform-origin: left center;
+      animation: tailWag 2s ease-in-out infinite;
+    }
+
+    /* Speech bubble */
+    .speech-bubble {
+      background: #1a1a2e;
+      border: 2px solid #00ffc8;
+      border-radius: 16px;
+      padding: 20px 24px;
+      max-width: 500px;
+      position: relative;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .speech-bubble::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 12px solid #00ffc8;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      top: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 10px solid #1a1a2e;
+    }
+
+    .speech-bubble p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #ccc;
+    }
+
+    .speech-bubble .az-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: #00ffc8;
+      margin-bottom: 8px;
+    }
+
+    /* Countdown */
+    .countdown-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .countdown-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(9px, 2vw, 12px);
+      color: #ffe44d;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+    }
+
+    .countdown {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .countdown-unit {
+      background: #1a1a2e;
+      border: 1px solid #2a2a3e;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 70px;
+    }
+
+    .countdown-value {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(18px, 4vw, 28px);
+      color: #00ffc8;
+      display: block;
+    }
+
+    .countdown-unit-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      display: block;
+      letter-spacing: 1px;
+    }
+
+    /* Hours info */
+    .hours-info {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(8px, 1.5vw, 11px);
+      color: #555;
+      text-align: center;
+      line-height: 2;
+      margin-bottom: 30px;
+    }
+
+    /* Help link */
+    .help-link {
+      font-size: 14px;
+      color: #00ffc8;
+      text-decoration: none;
+      border: 1px solid #00ffc8;
+      padding: 10px 24px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .help-link:hover {
+      background: rgba(0, 255, 200, 0.1);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="closed-sign">CLOSED</div>
+
+  <div class="az-container">
+    <div class="az-dino">
+      <div class="az-spikes">
+        <div class="az-spike"></div>
+        <div class="az-spike"></div>
+        <div class="az-spike"></div>
+      </div>
+      <div class="az-head">
+        <div class="az-eye left">
+          <div class="az-pupil"></div>
+          <div class="az-eyelid"></div>
+        </div>
+        <div class="az-eye right">
+          <div class="az-pupil"></div>
+          <div class="az-eyelid"></div>
+        </div>
+        <div class="az-snout">
+          <div class="az-nostril left"></div>
+          <div class="az-nostril right"></div>
+          <div class="az-mouth"></div>
+        </div>
+      </div>
+      <div class="az-body">
+        <div class="az-belly"></div>
+        <div class="az-arm left"></div>
+        <div class="az-arm right"></div>
+        <div class="az-tail"></div>
+        <div class="az-foot left"></div>
+        <div class="az-foot right"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="speech-bubble">
+    <p class="az-name">Az says:</p>
+    <p>
+      The store's closed right now. Go outside, read a book, or build a game!
+    </p>
+  </div>
+
+  <div class="countdown-section">
+    <div class="countdown-label">We open again in</div>
+    <div class="countdown">
+      <div class="countdown-unit">
+        <span class="countdown-value" id="days">0</span>
+        <span class="countdown-unit-label">days</span>
+      </div>
+      <div class="countdown-unit">
+        <span class="countdown-value" id="hours">0</span>
+        <span class="countdown-unit-label">hours</span>
+      </div>
+      <div class="countdown-unit">
+        <span class="countdown-value" id="mins">0</span>
+        <span class="countdown-unit-label">mins</span>
+      </div>
+      <div class="countdown-unit">
+        <span class="countdown-value" id="secs">0</span>
+        <span class="countdown-unit-label">secs</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hours-info">
+    Fri 4pm-7:30pm<br>
+    Sat 7:30am-7:30pm<br>
+    Sun 7:30am-5pm<br>
+    Your local time
+  </div>
+
+  <a href="/help.html" class="help-link">Want to submit a game? Find out how</a>
+
+  <script>
+    function nextOpening() {
+      var now = new Date();
+      var day = now.getDay();
+      var hm = now.getHours() * 60 + now.getMinutes();
+
+      // Open windows: Fri 16:00-19:30, Sat 7:30-19:30, Sun 7:30-17:00
+      // If we're in a closed overnight gap, next opening is the morning
+      if (day === 5 && hm >= 1170) {
+        // Friday after 7:30pm, next open is Saturday 7:30am
+        var next = new Date(now);
+        next.setDate(now.getDate() + 1);
+        next.setHours(7, 30, 0, 0);
+        return next;
+      }
+      if (day === 6 && hm < 450) {
+        // Saturday before 7:30am
+        var next = new Date(now);
+        next.setHours(7, 30, 0, 0);
+        return next;
+      }
+      if (day === 6 && hm >= 1170) {
+        // Saturday after 7:30pm, next open is Sunday 7:30am
+        var next = new Date(now);
+        next.setDate(now.getDate() + 1);
+        next.setHours(7, 30, 0, 0);
+        return next;
+      }
+      if (day === 0 && hm < 450) {
+        // Sunday before 7:30am
+        var next = new Date(now);
+        next.setHours(7, 30, 0, 0);
+        return next;
+      }
+
+      // Otherwise, next opening is Friday 4pm
+      var daysUntilFriday = (5 - day + 7) % 7;
+      if (daysUntilFriday === 0 && hm >= 960) daysUntilFriday = 7;
+
+      var next = new Date(now);
+      next.setDate(now.getDate() + daysUntilFriday);
+      next.setHours(16, 0, 0, 0);
+      return next;
+    }
+
+    function updateCountdown() {
+      var now = new Date();
+      var target = nextOpening();
+      var diff = Math.max(0, target - now);
+
+      var totalSecs = Math.floor(diff / 1000);
+      var d = Math.floor(totalSecs / 86400);
+      var h = Math.floor((totalSecs % 86400) / 3600);
+      var m = Math.floor((totalSecs % 3600) / 60);
+      var s = totalSecs % 60;
+
+      document.getElementById('days').textContent = d;
+      document.getElementById('hours').textContent = h;
+      document.getElementById('mins').textContent = m;
+      document.getElementById('secs').textContent = s;
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+
+</body>
+
+</html>

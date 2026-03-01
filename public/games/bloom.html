@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  (function() {
+    var d = new Date(), day = d.getDay(), hm = d.getHours() * 60 + d.getMinutes();
+    var open = (day === 5 && hm >= 960 && hm < 1170)
+           || (day === 6 && hm >= 450 && hm < 1170)
+           || (day === 0 && hm >= 450 && hm < 1020);
+    if (!open) window.location.replace('/closed.html');
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">

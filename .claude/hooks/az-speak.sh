@@ -10,22 +10,14 @@ MAX_CHARS=500
 # Read the hook payload from stdin
 payload=$(cat)
 
-# Extract the stop reason - only speak on end_turn (not tool use etc)
-stop_reason=$(echo "$payload" | jq -r '.stop_reason // empty' 2>/dev/null)
-if [ "$stop_reason" != "end_turn" ]; then
+# Only speak when stop hook is not already active (prevents loops)
+active=$(echo "$payload" | jq -r '.stop_hook_active // false' 2>/dev/null)
+if [ "$active" = "true" ]; then
   exit 0
 fi
 
-# Extract the last assistant message text from the transcript
-transcript=$(echo "$payload" | jq -r '.transcript_path // empty' 2>/dev/null)
-if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
-  exit 0
-fi
-
-# Get the last assistant message content - strip markdown and tool noise
-text=$(tail -c 100000 "$transcript" \
-  | jq -r 'select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text' 2>/dev/null \
-  | tail -1 \
+# Get the last assistant message directly from the payload
+text=$(echo "$payload" | jq -r '.last_assistant_message // empty' 2>/dev/null \
   | sed 's/```[^`]*```//g' \
   | sed 's/`[^`]*`//g' \
   | sed 's/\*\*//g' \

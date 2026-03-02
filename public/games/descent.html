@@ -265,6 +265,7 @@ var staminaFlashTimer = 0; // frames remaining for stamina-empty flash
 var screenShakeTimer = 0; // frames remaining for floor-entry shake
 var dustMotes = []; // atmospheric particles in flashlight
 var discoveryTimer = 0; // frames for guitar discovery moment
+var lightBloom = 0; // frames remaining for breadcrumb light burst
 
 // Audio
 var audioCtx = null;
@@ -469,22 +470,9 @@ function buildFloor(floorIdx) {
   visitedCells = {};
   markVisited(player.x, player.y);
 
-  // Snap camera to correct position immediately
-  var cfg2 = FLOORS[floorIdx];
-  if (!cfg2.camera) {
-    cameraX = (W - cols * CELL) / 2;
-    cameraY = (H - rows * CELL) / 2;
-  } else {
-    var tcx = W / 2 - player.x;
-    var tcy = H / 2 - player.y;
-    var mw = cols * CELL, mh = rows * CELL;
-    if (mw <= W) tcx = (W - mw) / 2;
-    else tcx = Math.max(W - mw, Math.min(0, tcx));
-    if (mh <= H) tcy = (H - mh) / 2;
-    else tcy = Math.max(H - mh, Math.min(0, tcy));
-    cameraX = tcx;
-    cameraY = tcy;
-  }
+  // Snap camera to player centre immediately
+  cameraX = W / 2 - player.x;
+  cameraY = H / 2 - player.y;
 
   // Reset stamina
   stamina = maxStamina;
@@ -513,60 +501,38 @@ function markVisited(px, py) {
 }
 
 // ===== COLLISION DETECTION =====
+// Check if a single point is blocked by a wall
+function pointBlocked(px, py) {
+  if (px < 0 || py < 0 || px >= mazeW * CELL || py >= mazeH * CELL) return true;
+  var col = Math.floor(px / CELL);
+  var row = Math.floor(py / CELL);
+  if (col < 0 || col >= mazeW || row < 0 || row >= mazeH) return true;
+  var cell = maze[row][col];
+  var cx = px - col * CELL;
+  var cy = py - row * CELL;
+  var wt = 4;
+  if (cell.top && cy < wt) return true;
+  if (cell.bottom && cy > CELL - wt) return true;
+  if (cell.left && cx < wt) return true;
+  if (cell.right && cx > CELL - wt) return true;
+  return false;
+}
+
 function canMove(nx, ny) {
-  var r = player.size * 0.8;
-  // Check four corners of player bounding box
-  var points = [
-    [nx - r, ny - r],
-    [nx + r, ny - r],
-    [nx - r, ny + r],
-    [nx + r, ny + r]
-  ];
-  for (var i = 0; i < points.length; i++) {
-    var px = points[i][0], py = points[i][1];
-    if (px < 0 || py < 0 || px >= mazeW * CELL || py >= mazeH * CELL) return false;
-    var col = Math.floor(px / CELL);
-    var row = Math.floor(py / CELL);
-    if (col < 0 || col >= mazeW || row < 0 || row >= mazeH) return false;
-    var cell = maze[row][col];
-
-    // Check if we're crossing a wall boundary
-    var cellLeft = col * CELL;
-    var cellTop = row * CELL;
-    var cellRight = cellLeft + CELL;
-    var cellBottom = cellTop + CELL;
-
-    var wallThick = 3;
-    // Top wall
-    if (cell.top && py < cellTop + wallThick) return false;
-    // Bottom wall
-    if (cell.bottom && py > cellBottom - wallThick) return false;
-    // Left wall
-    if (cell.left && px < cellLeft + wallThick) return false;
-    // Right wall
-    if (cell.right && px > cellRight - wallThick) return false;
+  var r = player.size * 0.7;
+  // Sample 8 points around the circle + centre
+  for (var i = 0; i < 8; i++) {
+    var a = i * TAU / 8;
+    if (pointBlocked(nx + Math.cos(a) * r, ny + Math.sin(a) * r)) return false;
   }
   return true;
 }
 
 // ===== CAMERA =====
+// Player is always fixed at screen centre. The maze moves around them.
 function updateCamera() {
-  var cfg = FLOORS[currentFloor];
-  if (!cfg.camera) {
-    cameraX = (W - mazeW * CELL) / 2;
-    cameraY = (H - mazeH * CELL) / 2;
-    return;
-  }
-  var targetCX = W / 2 - player.x;
-  var targetCY = H / 2 - player.y;
-  // Clamp so maze edges don't go past canvas
-  var mw = mazeW * CELL, mh = mazeH * CELL;
-  if (mw <= W) targetCX = (W - mw) / 2;
-  else targetCX = Math.max(W - mw, Math.min(0, targetCX));
-  if (mh <= H) targetCY = (H - mh) / 2;
-  else targetCY = Math.max(H - mh, Math.min(0, targetCY));
-  cameraX += (targetCX - cameraX) * 0.12;
-  cameraY += (targetCY - cameraY) * 0.12;
+  cameraX = W / 2 - player.x;
+  cameraY = H / 2 - player.y;
 }
 
 // ===== PARTICLES =====
@@ -610,37 +576,102 @@ function initAudio() {
 function startAmbient() {
   if (!audioCtx) return;
   stopAmbient();
-  var ch = charData;
-  ambientOsc = audioCtx.createOscillator();
-  var freq = 55;
-  var type = 'sine';
-  if (selectedChar === 0) { freq = 50; type = 'sine'; }       // Stone: deep hum
-  if (selectedChar === 1) { freq = 110; type = 'sawtooth'; }   // Pixel: electronic
-  if (selectedChar === 2) { freq = 65; type = 'triangle'; }    // Fern: organic
-  if (selectedChar === 3) { freq = 82; type = 'sine'; }        // Echo: ethereal
-  ambientOsc.type = type;
-  ambientOsc.frequency.value = freq * (1 - currentFloor * 0.04);
+  var depthMul = 1 - currentFloor * 0.03;
+  var nodes = [];
 
-  // Add slight detuning for richness
-  var osc2 = audioCtx.createOscillator();
-  osc2.type = type;
-  osc2.frequency.value = freq * 1.003;
-  var g2 = audioCtx.createGain();
-  g2.gain.value = 0.03;
-  osc2.connect(g2);
-  g2.connect(audioCtx.destination);
-  osc2.start();
-  ambientOsc._osc2 = osc2;
-  ambientOsc._g2 = g2;
+  if (selectedChar === 0) {
+    // Slate — stone ruins: low resonant drone with slow tremolo, like wind in corridors
+    var o1 = audioCtx.createOscillator();
+    o1.type = 'sine'; o1.frequency.value = 82 * depthMul;
+    var o2 = audioCtx.createOscillator();
+    o2.type = 'sine'; o2.frequency.value = 123 * depthMul;
+    var o3 = audioCtx.createOscillator();
+    o3.type = 'triangle'; o3.frequency.value = 165 * depthMul;
+    var lfo = audioCtx.createOscillator();
+    lfo.type = 'sine'; lfo.frequency.value = 0.3;
+    var lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.04;
+    lfo.connect(lfoGain);
+    var g1 = audioCtx.createGain(); g1.gain.value = 0.07;
+    var g2 = audioCtx.createGain(); g2.gain.value = 0.04;
+    var g3 = audioCtx.createGain(); g3.gain.value = 0.025;
+    o1.connect(g1); o2.connect(g2); o3.connect(g3);
+    lfoGain.connect(g1.gain);
+    g1.connect(ambientGain); g2.connect(ambientGain); g3.connect(ambientGain);
+    o1.start(); o2.start(); o3.start(); lfo.start();
+    nodes.push(o1, o2, o3, lfo);
+  } else if (selectedChar === 1) {
+    // Pixel — digital: soft triangle pad with gentle pulse, not harsh
+    var o1 = audioCtx.createOscillator();
+    o1.type = 'triangle'; o1.frequency.value = 165 * depthMul;
+    var o2 = audioCtx.createOscillator();
+    o2.type = 'triangle'; o2.frequency.value = 220 * depthMul;
+    var o3 = audioCtx.createOscillator();
+    o3.type = 'sine'; o3.frequency.value = 330 * depthMul;
+    var lfo = audioCtx.createOscillator();
+    lfo.type = 'square'; lfo.frequency.value = 0.5;
+    var lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.02;
+    lfo.connect(lfoGain);
+    var g1 = audioCtx.createGain(); g1.gain.value = 0.05;
+    var g2 = audioCtx.createGain(); g2.gain.value = 0.035;
+    var g3 = audioCtx.createGain(); g3.gain.value = 0.02;
+    o1.connect(g1); o2.connect(g2); o3.connect(g3);
+    lfoGain.connect(g2.gain);
+    g1.connect(ambientGain); g2.connect(ambientGain); g3.connect(ambientGain);
+    o1.start(); o2.start(); o3.start(); lfo.start();
+    nodes.push(o1, o2, o3, lfo);
+  } else if (selectedChar === 2) {
+    // Fern — organic caves: warm open fifth with slow breathing modulation
+    var o1 = audioCtx.createOscillator();
+    o1.type = 'sine'; o1.frequency.value = 110 * depthMul;
+    var o2 = audioCtx.createOscillator();
+    o2.type = 'sine'; o2.frequency.value = 165 * depthMul;
+    var o3 = audioCtx.createOscillator();
+    o3.type = 'triangle'; o3.frequency.value = 220 * depthMul;
+    var lfo = audioCtx.createOscillator();
+    lfo.type = 'sine'; lfo.frequency.value = 0.15;
+    var lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.03;
+    lfo.connect(lfoGain);
+    var g1 = audioCtx.createGain(); g1.gain.value = 0.06;
+    var g2 = audioCtx.createGain(); g2.gain.value = 0.04;
+    var g3 = audioCtx.createGain(); g3.gain.value = 0.025;
+    o1.connect(g1); o2.connect(g2); o3.connect(g3);
+    lfoGain.connect(g1.gain);
+    g1.connect(ambientGain); g2.connect(ambientGain); g3.connect(ambientGain);
+    o1.start(); o2.start(); o3.start(); lfo.start();
+    nodes.push(o1, o2, o3, lfo);
+  } else {
+    // Echo — dreamlike: ethereal beating tones with slow phase drift
+    var o1 = audioCtx.createOscillator();
+    o1.type = 'sine'; o1.frequency.value = 174 * depthMul;
+    var o2 = audioCtx.createOscillator();
+    o2.type = 'sine'; o2.frequency.value = 175.5 * depthMul; // 1.5Hz beat
+    var o3 = audioCtx.createOscillator();
+    o3.type = 'sine'; o3.frequency.value = 261 * depthMul;
+    var o4 = audioCtx.createOscillator();
+    o4.type = 'sine'; o4.frequency.value = 262.2 * depthMul; // slow shimmer
+    var g1 = audioCtx.createGain(); g1.gain.value = 0.045;
+    var g2 = audioCtx.createGain(); g2.gain.value = 0.045;
+    var g3 = audioCtx.createGain(); g3.gain.value = 0.03;
+    var g4 = audioCtx.createGain(); g4.gain.value = 0.03;
+    o1.connect(g1); o2.connect(g2); o3.connect(g3); o4.connect(g4);
+    g1.connect(ambientGain); g2.connect(ambientGain); g3.connect(ambientGain); g4.connect(ambientGain);
+    o1.start(); o2.start(); o3.start(); o4.start();
+    nodes.push(o1, o2, o3, o4);
+  }
 
-  ambientOsc.connect(ambientGain);
-  ambientOsc.start();
+  ambientOsc = { _nodes: nodes };
 }
 
 function stopAmbient() {
   if (ambientOsc) {
-    try { ambientOsc.stop(); } catch(e) {}
-    if (ambientOsc._osc2) try { ambientOsc._osc2.stop(); } catch(e) {}
+    if (ambientOsc._nodes) {
+      ambientOsc._nodes.forEach(function(n) { try { n.stop(); } catch(e) {} });
+    } else {
+      try { ambientOsc.stop(); } catch(e) {}
+    }
     ambientOsc = null;
   }
 }
@@ -799,14 +830,14 @@ function updateAz() {
 
 // ===== INPUT =====
 document.addEventListener('keydown', function(e) {
-  keys[e.key] = true;
-  if (e.key === 'Escape') {
+  keys[e.code] = true;
+  if (e.code === 'Escape') {
     if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
   }
 });
 document.addEventListener('keyup', function(e) {
-  keys[e.key] = false;
+  keys[e.code] = false;
 });
 
 // ===== UI FUNCTIONS =====
@@ -1075,7 +1106,7 @@ function drawBreadcrumbs() {
     ctx.fillStyle = ch.accent;
     ctx.globalAlpha = pulse * 0.8;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 3 + pulse, 0, TAU);
+    ctx.arc(b.x, b.y, 6 + pulse * 2, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -1559,14 +1590,16 @@ function drawFogOfWar() {
   // Cut visibility holes using destination-out (only affects fog layer)
   fogCtx.globalCompositeOperation = 'destination-out';
 
-  // Ambient circle around player (always visible)
-  var ambientGrad = fogCtx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 50);
+  // Ambient circle around player (expands briefly on breadcrumb pickup)
+  var bloomPct = lightBloom / 20;
+  var ambientRadius = 50 + bloomPct * 120;
+  var ambientGrad = fogCtx.createRadialGradient(player.x, player.y, 10, player.x, player.y, ambientRadius);
   ambientGrad.addColorStop(0, 'rgba(0,0,0,1)');
-  ambientGrad.addColorStop(0.5, 'rgba(0,0,0,0.7)');
+  ambientGrad.addColorStop(0.4, 'rgba(0,0,0,' + (0.7 + bloomPct * 0.3) + ')');
   ambientGrad.addColorStop(1, 'rgba(0,0,0,0)');
   fogCtx.fillStyle = ambientGrad;
   fogCtx.beginPath();
-  fogCtx.arc(player.x, player.y, 50, 0, TAU);
+  fogCtx.arc(player.x, player.y, ambientRadius, 0, TAU);
   fogCtx.fill();
 
   // Raycasted flashlight cone
@@ -1719,10 +1752,10 @@ function update() {
 
   // Movement
   var dx = 0, dy = 0;
-  if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx -= 1;
-  if (keys['ArrowRight'] || keys['d'] || keys['D']) dx += 1;
-  if (keys['ArrowUp'] || keys['w'] || keys['W']) dy -= 1;
-  if (keys['ArrowDown'] || keys['s'] || keys['S']) dy += 1;
+  if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
 
   // Normalise diagonal
   if (dx !== 0 && dy !== 0) {
@@ -1731,12 +1764,12 @@ function update() {
   }
 
   // Sprint
-  var wantsSprint = (keys['Shift'] || keys[' ']) && (dx !== 0 || dy !== 0);
+  var wantsSprint = (keys['ShiftLeft'] || keys['ShiftRight'] || keys['Space']) && (dx !== 0 || dy !== 0);
   isSprinting = wantsSprint && stamina > 0;
   var speed = walkSpeed * ch.speedMult;
   if (isSprinting) {
     speed = sprintSpeed * ch.speedMult;
-    stamina = Math.max(0, stamina - 0.6);
+    stamina = Math.max(0, stamina - 0.35);
   } else if (wantsSprint && stamina <= 0) {
     // Tried to sprint but empty -- flash the bar
     staminaFlashTimer = 20;
@@ -1798,6 +1831,7 @@ function update() {
       spawnParticles(b.x, b.y, ch.accent, 8);
       playBreadcrumbChime();
       lastBreadcrumbTime = 0; // reset Az trigger
+      lightBloom = 20; // brief light burst
     }
   }
 
@@ -1833,6 +1867,7 @@ function update() {
   // Decrement visual timers
   if (staminaFlashTimer > 0) staminaFlashTimer--;
   if (screenShakeTimer > 0) screenShakeTimer--;
+  if (lightBloom > 0) lightBloom--;
 
   // Spawn dust motes in flashlight
   if (Math.random() < 0.15) {

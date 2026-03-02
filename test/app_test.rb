@@ -42,6 +42,19 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, "Space Dodge"
   end
 
+  # Dodgeball page
+
+  def test_dodgeball_returns_200
+    get "/games/dodgeball.html"
+    assert_equal 200, last_response.status
+  end
+
+  def test_dodgeball_serves_html
+    get "/games/dodgeball.html"
+    assert_equal "text/html", last_response.content_type
+    assert_includes last_response.body, "Dodgeball"
+  end
+
   # Help page
 
   def test_help_returns_200
@@ -239,6 +252,23 @@ class LeaderboardApiTest < Minitest::Test
     post "/api/scores", JSON.generate({ game: "space-dodge", name: "", value: 100 }), { "CONTENT_TYPE" => "application/json" }
     data = JSON.parse(last_response.body)
     assert_equal "C&C", data["scores"][0]["name"]
+  end
+
+  def test_get_scores_dodgeball_sorted_desc
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["dodgeball", "AAA", 100])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["dodgeball", "BBB", 500])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["dodgeball", "CCC", 300])
+
+    get "/api/scores", game: "dodgeball"
+    data = JSON.parse(last_response.body)
+    values = data["scores"].map { |s| s["value"] }
+    assert_equal [500, 300, 100], values
+  end
+
+  def test_post_defaults_name_dodgeball
+    post "/api/scores", JSON.generate({ game: "dodgeball", name: "", value: 100 }), { "CONTENT_TYPE" => "application/json" }
+    data = JSON.parse(last_response.body)
+    assert_equal "LACHIE", data["scores"][0]["name"]
   end
 
   def test_post_defaults_name_bloom

@@ -1,0 +1,1523 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 Lachie, Cooper, Charlie & Jay Killeen -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function() {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
+    var d = new Date(), day = d.getDay(), hm = d.getHours() * 60 + d.getMinutes();
+    var open = (day === 5 && hm >= 960 && hm < 1170)
+           || (day === 6 && hm >= 450 && hm < 1170)
+           || (day === 0 && hm >= 450 && hm < 1020);
+    if (!open) window.location.replace('/closed.html');
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<title>Dodgeball - World Championship 1988</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+  canvas { display: block; }
+  .overlay { position: absolute; color: white; text-align: center; z-index: 10; max-width: 600px; padding: 20px; }
+  .overlay h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; margin-bottom: 8px; line-height: 1.6; }
+  .overlay h2 { font-family: 'Press Start 2P', monospace; font-size: 14px; margin-bottom: 8px; line-height: 1.6; }
+  .overlay p { font-size: 15px; color: #ccc; margin-bottom: 8px; line-height: 1.6; }
+  .btn { margin: 6px; padding: 14px 32px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; transition: transform 0.1s; }
+  .btn:hover { transform: scale(1.08); }
+  .btn-red { background: linear-gradient(135deg, #e44, #c22); }
+  .btn-blue { background: linear-gradient(135deg, #48f, #26c); }
+  .btn-gold { background: linear-gradient(135deg, #da3, #b80); }
+  .btn-green { background: linear-gradient(135deg, #0c8, #0a6); }
+  .btn-quit { background: linear-gradient(135deg, #c44, #a22); }
+  .info { font-size: 11px; color: #666; margin-top: 10px; line-height: 1.8; }
+  .title-leaderboard { margin: 16px auto; max-width: 360px; text-align: left; }
+  .lb-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #ffe44d; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .lb-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 12px; color: #aaa; font-family: 'Press Start 2P', monospace; }
+  .lb-row.highlight { color: #0f0; background: rgba(0,255,0,0.08); border-radius: 4px; }
+  .lb-row.placeholder { color: #333; }
+  .lb-empty { color: #555; font-size: 13px; padding: 8px 0; text-align: center; }
+  .lb-name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 10px; font-size: 14px; border-radius: 6px; width: 140px; font-family: 'Press Start 2P', monospace; margin-right: 8px; text-transform: uppercase; }
+  .lb-name-input::placeholder { color: rgba(255,255,255,0.3); font-size: 9px; }
+  .store-banner { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 6px 0; z-index: 30; background: rgba(0,0,0,0.6); }
+  .store-banner a { text-decoration: none; font-family: 'Press Start 2P', monospace; font-size: 12px; background: linear-gradient(to right, #ff6ec7, #00ffc8, #ffe44d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.6; transition: opacity 0.2s; }
+  .store-banner a:hover { opacity: 1; }
+  .player-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0; }
+  .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; text-align: left; max-width: 460px; margin: 10px auto; font-size: 11px; color: #ccc; line-height: 1.6; }
+  .controls-grid span.label { color: #ffe44d; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="store-banner"><a href="/">EZ-AZ</a></div>
+
+<div id="titleScreen" class="overlay">
+  <h1 style="color:#ffe44d;">DODGEBALL</h1>
+  <h2 style="color:#e44;">World Championship 1988</h2>
+  <p>By Lachie</p>
+  <p>Top-down 2v2 dodgeball. Pick up balls, throw, dodge, and dominate!</p>
+  <div class="player-buttons">
+    <button class="btn btn-red" onclick="startGame(1)">1 PLAYER</button>
+    <button class="btn btn-blue" onclick="startGame(2)">2 PLAYERS</button>
+    <button class="btn btn-green" onclick="startGame(3)">3 PLAYERS</button>
+    <button class="btn btn-gold" onclick="startGame(4)">4 PLAYERS</button>
+  </div>
+  <div class="controls-grid">
+    <div><span class="label">P1:</span> Arrows / . throw / / dodge</div>
+    <div><span class="label">P2:</span> WASD / Q throw / E dodge</div>
+    <div><span class="label">P3:</span> IJKL / U throw / O dodge</div>
+    <div><span class="label">P4:</span> Numpad 8456 / 0 throw / Enter dodge</div>
+  </div>
+  <div class="info">3 lives each. Best of 3 rounds. Don't cross the line!</div>
+  <div class="title-leaderboard" id="titleLeaderboard"></div>
+</div>
+
+<div id="pauseScreen" class="overlay" style="display:none;">
+  <h1>PAUSED</h1>
+  <p>Take a breather!</p>
+  <button class="btn btn-green" onclick="resumeGame()">Resume</button>
+  <button class="btn btn-quit" onclick="quitGame()">Quit</button>
+</div>
+
+<div id="gameOverScreen" class="overlay" style="display:none;"></div>
+
+<canvas id="game"></canvas>
+<script>
+// ===== CONSTANTS =====
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W = canvas.width = 700, H = canvas.height = 560;
+var COURT_TOP = 40, COURT_BOTTOM = H - 20, COURT_LEFT = 30, COURT_RIGHT = W - 30;
+var COURT_W = COURT_RIGHT - COURT_LEFT, COURT_H = COURT_BOTTOM - COURT_TOP;
+var CENTER_Y = COURT_TOP + COURT_H / 2;
+var PLAYER_R = 12, BALL_R = 6;
+var PLAYER_SPEED = 2.8, BALL_SPEED = 7, BALL_DECEL = 0.04;
+var DODGE_SPEED = 8, DODGE_DURATION = 8, DODGE_COOLDOWN = 90;
+var INVINCIBLE_FRAMES = 60;
+var MAX_LIVES = 3;
+var NUM_BALLS = 3;
+
+// ===== AUDIO =====
+var audioCtx = null;
+function ensureAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+function playSound(type) {
+  ensureAudio();
+  var now = audioCtx.currentTime;
+  var osc, gain;
+  switch(type) {
+    case 'throw':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(600, now+0.08);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.1);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.1);
+      break;
+    case 'hit':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(80, now+0.15);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.15);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.15);
+      break;
+    case 'dodge':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(500, now); osc.frequency.exponentialRampToValueAtTime(900, now+0.1);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.12);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.12);
+      break;
+    case 'whistle':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(2800, now); osc.frequency.setValueAtTime(2400, now+0.1); osc.frequency.setValueAtTime(2800, now+0.2);
+      gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.35);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.35);
+      break;
+    case 'buzzer':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.setValueAtTime(0.2, now+0.4); gain.gain.exponentialRampToValueAtTime(0.001, now+0.6);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.6);
+      break;
+    case 'cheer':
+      for (var i = 0; i < 5; i++) {
+        osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(400 + Math.random()*600, now+i*0.08);
+        gain.gain.setValueAtTime(0.06, now+i*0.08); gain.gain.exponentialRampToValueAtTime(0.001, now+i*0.08+0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now+i*0.08); osc.stop(now+i*0.08+0.15);
+      }
+      break;
+    case 'eliminate':
+      osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(100, now+0.3);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.35);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now+0.35);
+      break;
+  }
+}
+
+// Background music
+var bgmPlaying = false, bgmOscs = [];
+function startBGM() {
+  if (bgmPlaying) return;
+  ensureAudio();
+  bgmPlaying = true;
+  // Simple retro gym loop using oscillators
+  var bassNotes = [110, 130.81, 146.83, 130.81]; // A2, C3, D3, C3
+  var noteLen = 0.5; // 120 BPM = 0.5s per beat
+  function loopBass() {
+    if (!bgmPlaying) return;
+    var now = audioCtx.currentTime;
+    for (var i = 0; i < bassNotes.length; i++) {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(bassNotes[i], now + i * noteLen);
+      gain.gain.setValueAtTime(0.08, now + i * noteLen);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (i+0.9) * noteLen);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now + i * noteLen); osc.stop(now + (i+1) * noteLen);
+      bgmOscs.push(osc);
+    }
+    // Kick pattern
+    for (var i = 0; i < 4; i++) {
+      var osc2 = audioCtx.createOscillator();
+      var g2 = audioCtx.createGain();
+      osc2.type = 'sine'; osc2.frequency.setValueAtTime(80, now + i * noteLen); osc2.frequency.exponentialRampToValueAtTime(30, now + i * noteLen + 0.08);
+      g2.gain.setValueAtTime(0.12, now + i * noteLen); g2.gain.exponentialRampToValueAtTime(0.001, now + i * noteLen + 0.1);
+      osc2.connect(g2); g2.connect(audioCtx.destination);
+      osc2.start(now + i * noteLen); osc2.stop(now + i * noteLen + 0.1);
+      bgmOscs.push(osc2);
+    }
+    bgmTimer = setTimeout(loopBass, bassNotes.length * noteLen * 1000);
+  }
+  loopBass();
+}
+var bgmTimer = null;
+function stopBGM() {
+  bgmPlaying = false;
+  if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+  bgmOscs.forEach(function(o) { try { o.stop(); } catch(e) {} });
+  bgmOscs = [];
+}
+
+// ===== LEADERBOARD =====
+var leaderboardCache = [];
+function getLB() { try { return JSON.parse(localStorage.getItem('dodgeballLeaderboard')) || []; } catch(e) { return []; } }
+function saveLB(lb) { localStorage.setItem('dodgeballLeaderboard', JSON.stringify(lb)); }
+async function fetchLB() {
+  try {
+    var r = await fetch('/api/scores?game=dodgeball');
+    if (!r.ok) throw new Error();
+    var d = await r.json();
+    leaderboardCache = d.scores.map(function(s) { return {name:s.name, score:s.value}; });
+    saveLB(leaderboardCache);
+  } catch(e) { leaderboardCache = getLB(); }
+  return leaderboardCache;
+}
+function qualifies(s) { return leaderboardCache.length < 10 || s > leaderboardCache[leaderboardCache.length-1].score; }
+async function addLB(name, s) {
+  name = (name || 'LACHIE').toUpperCase().slice(0,12);
+  try {
+    var r = await fetch('/api/scores', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'dodgeball',name:name,value:s})});
+    if (!r.ok) throw new Error();
+    var d = await r.json();
+    leaderboardCache = d.scores.map(function(e) { return {name:e.name, score:e.value}; });
+    saveLB(leaderboardCache);
+  } catch(e) {
+    leaderboardCache.push({name:name,score:s});
+    leaderboardCache.sort(function(a,b) { return b.score-a.score; });
+    leaderboardCache = leaderboardCache.slice(0,10);
+    saveLB(leaderboardCache);
+  }
+}
+function renderLBHTML(scores, highlightName, highlightScore) {
+  var html = '';
+  if (!scores || scores.length === 0) {
+    html += '<div class="lb-empty">No scores yet. Be the first!</div>';
+  }
+  (scores || []).forEach(function(s, i) {
+    var cls = (highlightName && s.name === highlightName && s.score === highlightScore) ? ' highlight' : '';
+    html += '<div class="lb-row'+cls+'"><span>'+(i+1)+'. '+s.name+'</span><span>'+s.score+' pts</span></div>';
+  });
+  for (var i = (scores||[]).length; i < 10; i++) {
+    html += '<div class="lb-row placeholder"><span>'+(i+1)+'. ---</span><span>-</span></div>';
+  }
+  return html;
+}
+
+// Show leaderboard on title screen
+fetchLB().then(function(scores) {
+  var el = document.getElementById('titleLeaderboard');
+  if (el) el.innerHTML = '<div class="lb-title">HIGH SCORES</div>' + renderLBHTML(scores);
+});
+
+// ===== GAME STATE =====
+var gameState = 'title'; // title, countdown, playing, roundEnd, matchEnd, gameOver
+var paused = false;
+var playerCount = 1;
+var players = [], balls = [], referee = null, crowdRunners = [], ballBoys = [];
+var scores = [0, 0]; // team scores (rounds won)
+var totalScore = 0; // player's cumulative points
+var roundNum = 0, matchNum = 0, maxMatches = 1;
+var countdownTimer = 0;
+var announcementText = '', announcementTimer = 0;
+var frameCount = 0;
+var crowdRunnerTimer = 0;
+
+// Input state
+var keys = {};
+document.addEventListener('keydown', function(e) {
+  keys[e.key] = true;
+  keys[e.code] = true;
+  if (e.key === 'Escape') {
+    if (gameState === 'title') {
+      window.location.href = '/';
+    } else if (gameState === 'playing' || gameState === 'countdown') {
+      togglePause();
+    }
+  }
+});
+document.addEventListener('keyup', function(e) {
+  keys[e.key] = false;
+  keys[e.code] = false;
+});
+
+// ===== PLAYER SETUP =====
+var CONTROLS = [
+  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', throw_: 'Period', dodge: 'Slash' },
+  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', throw_: 'KeyQ', dodge: 'KeyE' },
+  { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL', throw_: 'KeyU', dodge: 'KeyO' },
+  { up: 'Numpad8', down: 'Numpad5', left: 'Numpad4', right: 'Numpad6', throw_: 'Numpad0', dodge: 'NumpadEnter' }
+];
+
+function createPlayer(id, team, isBot, controlIndex) {
+  var halfH = (COURT_BOTTOM - COURT_TOP) / 2;
+  var teamY = team === 0 ? COURT_TOP + halfH / 2 : CENTER_Y + halfH / 2;
+  var xSpread = COURT_W / 3;
+  var xOff = (id % 2 === 0) ? -xSpread/4 : xSpread/4;
+  return {
+    id: id, team: team, isBot: isBot, controlIndex: controlIndex,
+    x: COURT_LEFT + COURT_W/2 + xOff, y: teamY,
+    vx: 0, vy: 0,
+    facingX: 0, facingY: team === 0 ? 1 : -1,
+    lives: MAX_LIVES, alive: true,
+    hasBall: null, // reference to ball object or null
+    invincibleTimer: 0,
+    dodgeTimer: 0, dodgeCooldown: 0,
+    dodgeDirX: 0, dodgeDirY: 0,
+    throwPressed: false, dodgePressed: false,
+    name: '', // display name (Az for teammate bot)
+    isAz: false, // true if this bot is Az the dinosaur
+    // Bot AI
+    botTarget: null, botThinkTimer: 0, botDifficulty: 0
+  };
+}
+
+function createBall(x, y) {
+  return {
+    x: x, y: y, vx: 0, vy: 0,
+    speed: 0, loose: true, held: false,
+    thrownBy: null, // player who threw it
+    outOfBounds: false, ballBoyTimer: 0
+  };
+}
+
+// ===== REFEREE =====
+var REF_MAX_LIVES = 5;
+var refDown = false; // true when ref is KO'd - no more centre line!
+
+function createReferee() {
+  return {
+    x: COURT_LEFT + COURT_W/2, y: CENTER_Y,
+    vx: 0.6, vy: 0,
+    spinTimer: 0, fallTimer: 0,
+    lives: REF_MAX_LIVES, alive: true,
+    koTimer: 0, // stays down when KO'd
+    width: 16, height: 16
+  };
+}
+
+// ===== CROWD RUNNERS =====
+function spawnCrowdRunner() {
+  var fromLeft = Math.random() > 0.5;
+  var y = COURT_TOP + Math.random() * COURT_H;
+  return {
+    x: fromLeft ? COURT_LEFT - 20 : COURT_RIGHT + 20,
+    y: y, speed: (2 + Math.random() * 2) * (fromLeft ? 1 : -1),
+    baseSpeed: 0, // set after creation
+    width: 12, height: 14, active: true,
+    hasBall: null, // stolen ball reference
+    state: 'running', // running, chasing, throwing
+    targetBall: null, throwTimer: 0,
+    shirtColor: ['#e44','#48f','#0c8','#f80','#f0f','#ff0'][Math.floor(Math.random()*6)]
+  };
+}
+
+// ===== BALL BOYS =====
+function createBallBoys() {
+  return [
+    { x: COURT_LEFT - 15, y: CENTER_Y - 60, side: 'left', holdingBall: null, retrieving: false, targetBall: null, fumbleTimer: 0 },
+    { x: COURT_RIGHT + 15, y: CENTER_Y + 60, side: 'right', holdingBall: null, retrieving: false, targetBall: null, fumbleTimer: 0 },
+  ];
+}
+
+// ===== INITIALISE ROUND =====
+function initRound() {
+  players = [];
+  balls = [];
+  crowdRunners = [];
+
+  // Create players based on player count
+  var teamAssign;
+  if (playerCount === 1) {
+    teamAssign = [{team:0,bot:false,ci:0},{team:0,bot:true,ci:-1},{team:1,bot:true,ci:-1},{team:1,bot:true,ci:-1}];
+  } else if (playerCount === 2) {
+    teamAssign = [{team:0,bot:false,ci:0},{team:0,bot:true,ci:-1},{team:1,bot:false,ci:1},{team:1,bot:true,ci:-1}];
+  } else if (playerCount === 3) {
+    teamAssign = [{team:0,bot:false,ci:0},{team:0,bot:false,ci:1},{team:1,bot:false,ci:2},{team:1,bot:true,ci:-1}];
+  } else {
+    teamAssign = [{team:0,bot:false,ci:0},{team:0,bot:false,ci:1},{team:1,bot:false,ci:2},{team:1,bot:false,ci:3}];
+  }
+
+  // In 1-player mode, both arrow and WASD work for P1
+  var azAssigned = false;
+  for (var i = 0; i < teamAssign.length; i++) {
+    var ta = teamAssign[i];
+    var p = createPlayer(i, ta.team, ta.bot, ta.ci);
+    // Set bot difficulty based on tournament match
+    if (ta.bot) {
+      if (playerCount === 1) {
+        p.botDifficulty = matchNum; // 0=easy, 1=medium, 2=hard
+      } else {
+        p.botDifficulty = 1;
+      }
+      // First bot on the human's team (team 0) is Az
+      if (ta.team === 0 && !azAssigned) {
+        p.isAz = true;
+        p.name = 'Az';
+        azAssigned = true;
+      }
+    }
+    players.push(p);
+  }
+
+  // Place balls on centre line
+  var ballSpacing = COURT_W / (NUM_BALLS + 1);
+  for (var i = 0; i < NUM_BALLS; i++) {
+    balls.push(createBall(COURT_LEFT + ballSpacing * (i+1), CENTER_Y));
+  }
+
+  referee = createReferee();
+  refDown = false;
+  ballBoys = createBallBoys();
+  crowdRunnerTimer = 600 + Math.floor(Math.random() * 300);
+}
+
+// ===== INPUT HANDLING =====
+function getPlayerInput(p) {
+  if (p.isBot) return;
+  var ci = p.controlIndex;
+  var ctrl = CONTROLS[ci];
+  var dx = 0, dy = 0;
+
+  // Check code-based controls
+  if (keys[ctrl.up]) dy = -1;
+  if (keys[ctrl.down]) dy = 1;
+  if (keys[ctrl.left]) dx = -1;
+  if (keys[ctrl.right]) dx = 1;
+
+  // In 1-player, also accept WASD
+  if (playerCount === 1 && ci === 0) {
+    if (keys['KeyW']) dy = -1;
+    if (keys['KeyS']) dy = 1;
+    if (keys['KeyA']) dx = -1;
+    if (keys['KeyD']) dx = 1;
+    if (keys['KeyQ']) p.throwPressed = true;
+    if (keys['KeyE']) p.dodgePressed = true;
+  }
+
+  if (dx !== 0 || dy !== 0) {
+    var len = Math.sqrt(dx*dx + dy*dy);
+    p.vx = (dx/len) * PLAYER_SPEED;
+    p.vy = (dy/len) * PLAYER_SPEED;
+    p.facingX = dx; p.facingY = dy;
+  } else {
+    p.vx = 0; p.vy = 0;
+  }
+
+  if (keys[ctrl.throw_]) p.throwPressed = true;
+  if (keys[ctrl.dodge]) p.dodgePressed = true;
+}
+
+// ===== BOT AI =====
+function updateBot(p) {
+  if (!p.alive) return;
+  p.botThinkTimer--;
+  if (p.botThinkTimer > 0 && !p.hasBall) return;
+
+  var difficulty = p.botDifficulty; // 0=easy, 1=medium, 2=hard
+  var reactionMod = difficulty === 0 ? 0.5 : difficulty === 1 ? 0.75 : 1;
+  var accuracy = difficulty === 0 ? 0.4 : difficulty === 1 ? 0.65 : 0.85;
+
+  // Find nearest loose ball
+  var nearestBall = null, nearestDist = Infinity;
+  balls.forEach(function(b) {
+    if (!b.loose || b.held) return;
+    var d = Math.hypot(b.x - p.x, b.y - p.y);
+    if (d < nearestDist) { nearestDist = d; nearestBall = b; }
+  });
+
+  // Find nearest alive enemy
+  var nearestEnemy = null, nearestEnemyDist = Infinity;
+  players.forEach(function(e) {
+    if (e.team === p.team || !e.alive) return;
+    var d = Math.hypot(e.x - p.x, e.y - p.y);
+    if (d < nearestEnemyDist) { nearestEnemyDist = d; nearestEnemy = e; }
+  });
+
+  // Check for incoming balls to dodge
+  var dodgeBall = null;
+  balls.forEach(function(b) {
+    if (b.loose || b.held || !b.thrownBy || b.thrownBy.team === p.team) return;
+    var d = Math.hypot(b.x - p.x, b.y - p.y);
+    if (d < 80 && b.speed > 2) dodgeBall = b;
+  });
+
+  if (dodgeBall && Math.random() < reactionMod && p.dodgeCooldown <= 0) {
+    // Dodge!
+    p.dodgePressed = true;
+    p.facingX = dodgeBall.vx > 0 ? -1 : 1;
+    p.facingY = 0;
+    p.botThinkTimer = 20;
+    return;
+  }
+
+  if (p.hasBall) {
+    // Has ball - aim at enemy and throw
+    if (nearestEnemy) {
+      var dx = nearestEnemy.x - p.x;
+      var dy = nearestEnemy.y - p.y;
+      // Add inaccuracy
+      dx += (Math.random() - 0.5) * (1 - accuracy) * 100;
+      dy += (Math.random() - 0.5) * (1 - accuracy) * 100;
+      var len = Math.sqrt(dx*dx + dy*dy);
+      if (len > 0) { p.facingX = dx/len; p.facingY = dy/len; }
+
+      // Throw after a small delay based on difficulty
+      var throwDelay = difficulty === 0 ? 40 : difficulty === 1 ? 20 : 8;
+      if (p.botThinkTimer <= -throwDelay) {
+        p.throwPressed = true;
+        p.botThinkTimer = 30 + Math.floor(Math.random() * 30);
+      }
+    }
+    p.vx = 0; p.vy = 0;
+  } else {
+    // Go get a ball
+    if (nearestBall && nearestDist > PLAYER_R + BALL_R) {
+      var dx = nearestBall.x - p.x;
+      var dy = nearestBall.y - p.y;
+      var len = Math.sqrt(dx*dx + dy*dy);
+      var spd = PLAYER_SPEED * reactionMod;
+      p.vx = (dx/len) * spd;
+      p.vy = (dy/len) * spd;
+      p.facingX = dx/len; p.facingY = dy/len;
+    } else if (!nearestBall) {
+      // No balls available, wander towards centre of our half
+      var homeY = p.team === 0 ? COURT_TOP + COURT_H*0.25 : CENTER_Y + COURT_H*0.25;
+      var homeX = COURT_LEFT + COURT_W/2 + (Math.random()-0.5) * 80;
+      var dx = homeX - p.x, dy = homeY - p.y;
+      var len = Math.sqrt(dx*dx + dy*dy);
+      if (len > 20) {
+        p.vx = (dx/len) * PLAYER_SPEED * 0.5;
+        p.vy = (dy/len) * PLAYER_SPEED * 0.5;
+      } else {
+        p.vx = 0; p.vy = 0;
+      }
+    }
+    p.botThinkTimer = 5 + Math.floor(Math.random() * 10);
+  }
+}
+
+// ===== UPDATE =====
+function update() {
+  if (paused || gameState !== 'playing') return;
+  frameCount++;
+
+  // Countdown
+  if (gameState === 'countdown') return;
+
+  // Update players
+  players.forEach(function(p) {
+    if (!p.alive) return;
+
+    // Decrement timers
+    if (p.invincibleTimer > 0) p.invincibleTimer--;
+    if (p.dodgeCooldown > 0) p.dodgeCooldown--;
+
+    // Dodge roll active
+    if (p.dodgeTimer > 0) {
+      p.dodgeTimer--;
+      p.x += p.dodgeDirX * DODGE_SPEED;
+      p.y += p.dodgeDirY * DODGE_SPEED;
+      constrainPlayer(p);
+      return; // Skip normal movement during dodge
+    }
+
+    // Get input
+    p.throwPressed = false;
+    p.dodgePressed = false;
+    if (p.isBot) {
+      updateBot(p);
+    } else {
+      getPlayerInput(p);
+    }
+
+    // Move
+    p.x += p.vx;
+    p.y += p.vy;
+    constrainPlayer(p);
+
+    // Pick up ball
+    if (!p.hasBall) {
+      balls.forEach(function(b) {
+        if (!b.loose || b.held) return;
+        if (Math.hypot(b.x - p.x, b.y - p.y) < PLAYER_R + BALL_R) {
+          b.loose = false; b.held = true; b.thrownBy = null;
+          p.hasBall = b;
+        }
+      });
+    }
+
+    // Throw
+    if (p.throwPressed && p.hasBall) {
+      var b = p.hasBall;
+      var fx = p.facingX, fy = p.facingY;
+      var len = Math.sqrt(fx*fx + fy*fy);
+      if (len === 0) { fy = p.team === 0 ? 1 : -1; len = 1; }
+      b.vx = (fx/len) * BALL_SPEED;
+      b.vy = (fy/len) * BALL_SPEED;
+      b.speed = BALL_SPEED;
+      b.x = p.x + (fx/len) * (PLAYER_R + BALL_R + 2);
+      b.y = p.y + (fy/len) * (PLAYER_R + BALL_R + 2);
+      b.loose = false; b.held = false; b.thrownBy = p;
+      p.hasBall = null;
+      playSound('throw');
+    }
+
+    // Dodge
+    if (p.dodgePressed && p.dodgeCooldown <= 0 && p.dodgeTimer <= 0) {
+      var fx = p.facingX, fy = p.facingY;
+      var len = Math.sqrt(fx*fx + fy*fy);
+      if (len === 0) { fy = 1; len = 1; }
+      p.dodgeDirX = fx/len; p.dodgeDirY = fy/len;
+      p.dodgeTimer = DODGE_DURATION;
+      p.dodgeCooldown = DODGE_COOLDOWN;
+      p.invincibleTimer = Math.max(p.invincibleTimer, DODGE_DURATION + 5);
+      playSound('dodge');
+    }
+  });
+
+  // Update balls
+  balls.forEach(function(b) {
+    if (b.held) {
+      // Follow holder
+      var holder = players.find(function(p) { return p.hasBall === b; });
+      if (holder) { b.x = holder.x; b.y = holder.y; }
+      return;
+    }
+    if (b.loose) return;
+
+    // Ball in flight
+    b.x += b.vx;
+    b.y += b.vy;
+    b.speed = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
+
+    // Decelerate
+    if (b.speed > 0.2) {
+      var ratio = Math.max(0, (b.speed - BALL_DECEL)) / b.speed;
+      b.vx *= ratio;
+      b.vy *= ratio;
+    } else {
+      b.vx = 0; b.vy = 0; b.loose = true; b.thrownBy = null;
+    }
+
+    // Bounce off walls
+    if (b.x < COURT_LEFT + BALL_R) { b.x = COURT_LEFT + BALL_R; b.vx = Math.abs(b.vx); }
+    if (b.x > COURT_RIGHT - BALL_R) { b.x = COURT_RIGHT - BALL_R; b.vx = -Math.abs(b.vx); }
+    if (b.y < COURT_TOP + BALL_R) { b.y = COURT_TOP + BALL_R; b.vy = Math.abs(b.vy); }
+    if (b.y > COURT_BOTTOM - BALL_R) { b.y = COURT_BOTTOM - BALL_R; b.vy = -Math.abs(b.vy); }
+
+    // Hit detection with players
+    if (b.thrownBy && b.speed > 1) {
+      players.forEach(function(p) {
+        if (!p.alive || p.invincibleTimer > 0) return;
+        if (b.thrownBy && p.team === b.thrownBy.team) return;
+        if (p.dodgeTimer > 0) return;
+        if (Math.hypot(b.x - p.x, b.y - p.y) < PLAYER_R + BALL_R) {
+          // HIT!
+          p.lives--;
+          p.invincibleTimer = INVINCIBLE_FRAMES;
+          b.vx = 0; b.vy = 0; b.loose = true;
+          var thrower = b.thrownBy;
+          b.thrownBy = null;
+
+          // Score for hit
+          if (thrower && (thrower.controlIndex === 0 || (playerCount === 1 && thrower.team === 0))) {
+            totalScore += 100;
+          }
+
+          playSound('hit');
+          showAnnouncement('HIT!', 40);
+
+          if (p.lives <= 0) {
+            p.alive = false;
+            // Elimination bonus
+            if (thrower && (thrower.controlIndex === 0 || (playerCount === 1 && thrower.team === 0))) {
+              totalScore += 250;
+            }
+            playSound('eliminate');
+            showAnnouncement('ELIMINATED!', 60);
+            // Drop ball if holding
+            if (p.hasBall) { p.hasBall.loose = true; p.hasBall.held = false; p.hasBall = null; }
+          }
+        }
+      });
+    }
+
+    // Hit referee
+    if (referee && referee.alive && b.speed > 1) {
+      if (Math.hypot(b.x - referee.x, b.y - referee.y) < referee.width + BALL_R) {
+        referee.lives--;
+        referee.spinTimer = 40;
+        referee.fallTimer = 60;
+        b.vx *= -0.3; b.vy *= -0.3;
+        // Score bonus if a human-team player threw it
+        var thrower = b.thrownBy;
+        if (thrower && (thrower.controlIndex === 0 || (playerCount === 1 && thrower.team === 0))) {
+          totalScore += 50;
+        }
+        playSound('whistle');
+
+        if (referee.lives <= 0) {
+          // Ref is KO'd! No more rules!
+          referee.alive = false;
+          referee.koTimer = 9999;
+          refDown = true;
+          playSound('cheer');
+          showAnnouncement('REF KO! NO RULES!', 120);
+        } else {
+          showAnnouncement('REF HIT! ' + referee.lives + ' LEFT', 50);
+        }
+      }
+    }
+
+    // Hit crowd runners (only balls in flight knock them out)
+    crowdRunners.forEach(function(cr) {
+      if (!cr.active || cr.hasBall) return;
+      if (b.thrownBy && Math.hypot(b.x - cr.x, b.y - cr.y) < cr.width + BALL_R) {
+        b.vx *= 0.2; b.vy *= 0.2;
+        cr.active = false;
+      }
+    });
+  });
+
+  // Update referee
+  if (referee) {
+    if (!referee.alive) {
+      // KO'd - stays on the ground
+      referee.koTimer--;
+    } else if (referee.fallTimer > 0) {
+      referee.fallTimer--;
+    } else if (referee.spinTimer > 0) {
+      referee.spinTimer--;
+    } else {
+      referee.x += referee.vx;
+      if (referee.x < COURT_LEFT + 30 || referee.x > COURT_RIGHT - 30) referee.vx *= -1;
+      // Slight bobbing
+      referee.y = CENTER_Y + Math.sin(frameCount * 0.03) * 5;
+    }
+  }
+
+  // Crowd runners
+  crowdRunnerTimer--;
+  if (crowdRunnerTimer <= 0) {
+    var cr = spawnCrowdRunner();
+    cr.baseSpeed = cr.speed;
+    crowdRunners.push(cr);
+    crowdRunnerTimer = 450 + Math.floor(Math.random() * 350); // 7-13 sec at 60fps
+  }
+  crowdRunners.forEach(function(cr) {
+    if (!cr.active) return;
+
+    if (cr.state === 'running') {
+      // Look for a nearby loose ball to steal
+      var nearBall = null, nearDist = Infinity;
+      balls.forEach(function(b) {
+        if (!b.loose || b.held) return;
+        var d = Math.hypot(b.x - cr.x, b.y - cr.y);
+        if (d < 100 && d < nearDist) { nearDist = d; nearBall = b; }
+      });
+      if (nearBall && Math.random() < 0.02) {
+        cr.state = 'chasing';
+        cr.targetBall = nearBall;
+      } else {
+        cr.x += cr.speed;
+      }
+    } else if (cr.state === 'chasing') {
+      // Chase the ball
+      var tb = cr.targetBall;
+      if (!tb || !tb.loose || tb.held) {
+        // Ball gone, go back to running
+        cr.state = 'running';
+        cr.targetBall = null;
+      } else {
+        var dx = tb.x - cr.x, dy = tb.y - cr.y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 10) {
+          // Steal it!
+          tb.loose = false; tb.held = true;
+          cr.hasBall = tb;
+          cr.state = 'throwing';
+          cr.throwTimer = 40 + Math.floor(Math.random() * 40);
+          showAnnouncement('BALL STOLEN!', 40);
+        } else {
+          var spd = Math.abs(cr.baseSpeed) * 1.2;
+          cr.x += (dx / dist) * spd;
+          cr.y += (dy / dist) * spd;
+        }
+      }
+    } else if (cr.state === 'throwing') {
+      // Hold ball briefly, then hurl it at the ref
+      cr.throwTimer--;
+      if (cr.hasBall) {
+        cr.hasBall.x = cr.x;
+        cr.hasBall.y = cr.y;
+      }
+      if (cr.throwTimer <= 0 && cr.hasBall) {
+        var b = cr.hasBall;
+        b.held = false;
+        // Aim at ref if alive, otherwise random direction
+        if (referee && referee.alive) {
+          var dx = referee.x - cr.x, dy = referee.y - cr.y;
+          var len = Math.sqrt(dx*dx + dy*dy);
+          if (len > 0) { b.vx = (dx/len) * 5; b.vy = (dy/len) * 5; }
+        } else {
+          var angle = Math.random() * Math.PI * 2;
+          b.vx = Math.cos(angle) * 4;
+          b.vy = Math.sin(angle) * 4;
+        }
+        b.speed = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
+        b.thrownBy = null; // crowd threw it, no player credit for hits
+        b.loose = false;
+        cr.hasBall = null;
+        cr.state = 'running';
+        cr.speed = cr.baseSpeed;
+      }
+    }
+
+    // Remove when off screen (only if running)
+    if (cr.state === 'running' && (cr.x < COURT_LEFT - 60 || cr.x > COURT_RIGHT + 60)) cr.active = false;
+
+    // Bump players
+    players.forEach(function(p) {
+      if (!p.alive) return;
+      if (Math.hypot(cr.x - p.x, cr.y - p.y) < cr.width + PLAYER_R) {
+        p.x += (cr.speed || cr.baseSpeed) * 0.5;
+        constrainPlayer(p);
+      }
+    });
+  });
+  crowdRunners = crowdRunners.filter(function(cr) { return cr.active; });
+
+  // Check round end
+  var team0Alive = players.filter(function(p) { return p.team === 0 && p.alive; }).length;
+  var team1Alive = players.filter(function(p) { return p.team === 1 && p.alive; }).length;
+  if (team0Alive === 0 || team1Alive === 0) {
+    endRound(team0Alive > 0 ? 0 : 1);
+  }
+}
+
+function constrainPlayer(p) {
+  // Keep within court
+  p.x = Math.max(COURT_LEFT + PLAYER_R, Math.min(COURT_RIGHT - PLAYER_R, p.x));
+  // Enforce centre line (unless ref is KO'd - no rules!)
+  if (refDown) {
+    p.y = Math.max(COURT_TOP + PLAYER_R, Math.min(COURT_BOTTOM - PLAYER_R, p.y));
+  } else if (p.team === 0) {
+    p.y = Math.max(COURT_TOP + PLAYER_R, Math.min(CENTER_Y - PLAYER_R, p.y));
+  } else {
+    p.y = Math.max(CENTER_Y + PLAYER_R, Math.min(COURT_BOTTOM - PLAYER_R, p.y));
+  }
+}
+
+// ===== ANNOUNCEMENTS =====
+function showAnnouncement(text, frames) {
+  announcementText = text;
+  announcementTimer = frames;
+}
+
+// ===== ROUND / MATCH LOGIC =====
+function endRound(winningTeam) {
+  gameState = 'roundEnd';
+  scores[winningTeam]++;
+  stopBGM();
+  playSound('buzzer');
+
+  // Round win bonus for player
+  if ((playerCount === 1 && winningTeam === 0) ||
+      (playerCount > 1 && winningTeam === 0)) {
+    totalScore += 500;
+  }
+
+  playSound('cheer');
+
+  var teamName = winningTeam === 0 ? 'RED' : 'BLUE';
+  showAnnouncement(teamName + ' TEAM WINS ROUND!', 120);
+
+  setTimeout(function() {
+    // Check if match is over (best of 3)
+    if (scores[0] >= 2 || scores[1] >= 2) {
+      endMatch(scores[0] >= 2 ? 0 : 1);
+    } else {
+      roundNum++;
+      startCountdown();
+    }
+  }, 2500);
+}
+
+function endMatch(winningTeam) {
+  var teamName = winningTeam === 0 ? 'RED' : 'BLUE';
+
+  // Match win bonus
+  if ((playerCount === 1 && winningTeam === 0) ||
+      (playerCount > 1 && winningTeam === 0)) {
+    totalScore += 1000;
+  }
+
+  if (playerCount === 1 && maxMatches > 1) {
+    // Tournament mode
+    matchNum++;
+    if (matchNum >= maxMatches) {
+      // Tournament over
+      if (winningTeam === 0) {
+        totalScore += 2000; // Champion bonus
+        showAnnouncement('WORLD CHAMPION 1988!', 180);
+        playSound('cheer');
+        setTimeout(function() { playSound('cheer'); }, 300);
+        setTimeout(function() { playSound('cheer'); }, 600);
+      } else {
+        showAnnouncement('TOURNAMENT OVER', 120);
+      }
+      setTimeout(showGameOver, 3000);
+    } else {
+      // Next match
+      var matchNames = ['QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'];
+      scores = [0, 0];
+      roundNum = 0;
+      showAnnouncement('NEXT: ' + (matchNames[matchNum] || 'MATCH'), 120);
+      setTimeout(startCountdown, 2500);
+    }
+  } else {
+    // Single match mode
+    setTimeout(showGameOver, 2500);
+  }
+}
+
+function startCountdown() {
+  gameState = 'countdown';
+  initRound();
+  countdownTimer = 180; // 3 seconds at 60fps
+  startBGM();
+
+  function tickCountdown() {
+    if (paused) { setTimeout(tickCountdown, 16); return; }
+    countdownTimer--;
+    if (countdownTimer <= 0) {
+      gameState = 'playing';
+      showAnnouncement('GO!', 40);
+    } else {
+      setTimeout(tickCountdown, 16);
+    }
+  }
+  tickCountdown();
+}
+
+function showGameOver() {
+  gameState = 'gameOver';
+  stopBGM();
+  var screen = document.getElementById('gameOverScreen');
+  var matchResult = scores[0] >= 2 ? 'RED TEAM WINS!' : 'BLUE TEAM WINS!';
+  if (playerCount === 1 && matchNum >= maxMatches && scores[0] >= 2) {
+    matchResult = 'YOU ARE THE 1988 WORLD CHAMPION!';
+  }
+
+  var html = '<h1 style="color:#ffe44d;">GAME OVER</h1>';
+  html += '<h2 style="color:#ccc;">' + matchResult + '</h2>';
+  html += '<p>Score: <span style="color:#ffe44d;font-weight:bold;">' + totalScore + ' pts</span></p>';
+
+  if (qualifies(totalScore) && totalScore > 0) {
+    html += '<p style="color:#0f0;">NEW HIGH SCORE!</p>';
+    html += '<div style="margin:12px 0;"><input class="lb-name-input" id="nameInput" maxlength="12" placeholder="YOUR NAME" /></div>';
+    html += '<button class="btn btn-green" id="submitScoreBtn">SAVE SCORE</button><br>';
+    html += '<div class="title-leaderboard" id="endLeaderboard">' + renderLBHTML(leaderboardCache) + '</div>';
+    html += '<button class="btn btn-gold" id="playAgainBtn">PLAY AGAIN</button>';
+    html += '<button class="btn btn-quit" id="quitBtn" style="margin-left:8px;">BACK TO STORE</button>';
+
+    screen.innerHTML = html;
+    screen.style.display = '';
+
+    document.getElementById('submitScoreBtn').onclick = async function() {
+      var name = document.getElementById('nameInput').value.trim() || 'LACHIE';
+      await addLB(name, totalScore);
+      document.getElementById('endLeaderboard').innerHTML = renderLBHTML(leaderboardCache, name.toUpperCase().slice(0,12), totalScore);
+      document.getElementById('submitScoreBtn').style.display = 'none';
+      document.getElementById('nameInput').style.display = 'none';
+    };
+  } else {
+    html += '<div class="title-leaderboard" id="endLeaderboard">' + renderLBHTML(leaderboardCache) + '</div>';
+    html += '<button class="btn btn-gold" id="playAgainBtn">PLAY AGAIN</button>';
+    html += '<button class="btn btn-quit" id="quitBtn" style="margin-left:8px;">BACK TO STORE</button>';
+    screen.innerHTML = html;
+    screen.style.display = '';
+  }
+
+  document.getElementById('playAgainBtn').onclick = function() {
+    screen.style.display = 'none';
+    startGame(playerCount);
+  };
+  document.getElementById('quitBtn').onclick = function() { window.location.href = '/'; };
+  if (document.getElementById('nameInput')) document.getElementById('nameInput').focus();
+}
+
+// ===== START GAME =====
+function startGame(numPlayers) {
+  ensureAudio();
+  playerCount = numPlayers;
+  totalScore = 0;
+  matchNum = 0;
+  roundNum = 0;
+  scores = [0, 0];
+  maxMatches = (numPlayers === 1) ? 3 : 1;
+  document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('gameOverScreen').style.display = 'none';
+  document.getElementById('pauseScreen').style.display = 'none';
+  startCountdown();
+}
+// Expose to onclick
+window.startGame = startGame;
+
+function togglePause() {
+  if (gameState === 'gameOver' || gameState === 'title') return;
+  paused = !paused;
+  document.getElementById('pauseScreen').style.display = paused ? '' : 'none';
+  if (paused) stopBGM();
+  else startBGM();
+}
+function resumeGame() { togglePause(); }
+function quitGame() { window.location.href = '/'; }
+window.resumeGame = resumeGame;
+window.quitGame = quitGame;
+
+// ===== DRAW =====
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Scoreboard area at very top
+  drawScoreboard();
+
+  // Court background - parquet floor
+  drawCourt();
+
+  // VHS scanlines
+  drawScanlines();
+
+  // Draw ball boys
+  drawBallBoys();
+
+  // Draw crowd runners
+  crowdRunners.forEach(drawCrowdRunner);
+
+  // Draw referee
+  if (referee) drawReferee();
+
+  // Draw balls (on ground)
+  balls.forEach(function(b) {
+    if (b.held) return;
+    drawBall(b);
+  });
+
+  // Draw players
+  players.forEach(function(p) {
+    if (!p.alive) return;
+    drawPlayer(p);
+  });
+
+  // Announcements
+  if (announcementTimer > 0) {
+    announcementTimer--;
+    ctx.save();
+    ctx.font = 'bold 28px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = '#ffe44d';
+    ctx.shadowBlur = 20;
+    ctx.fillText(announcementText, W/2, H/2);
+    ctx.restore();
+  }
+
+  // Countdown
+  if (gameState === 'countdown' && countdownTimer > 0) {
+    var num = Math.ceil(countdownTimer / 60);
+    ctx.save();
+    ctx.font = 'bold 60px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffe44d';
+    ctx.shadowColor = '#ffe44d';
+    ctx.shadowBlur = 30;
+    ctx.fillText(num, W/2, H/2 + 20);
+    ctx.restore();
+  }
+}
+
+function drawScoreboard() {
+  // Scoreboard background
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, COURT_TOP);
+
+  // "WORLD DODGEBALL CHAMPIONSHIP 1988"
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffe44d';
+  ctx.fillText('WORLD DODGEBALL CHAMPIONSHIP 1988', W/2, 13);
+
+  // Scores
+  ctx.font = '10px "Press Start 2P", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#f55';
+  ctx.fillText('RED ' + scores[0], 40, 32);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#58f';
+  ctx.fillText(scores[1] + ' BLUE', W - 40, 32);
+
+  // Lives display
+  ctx.textAlign = 'center';
+  ctx.font = '7px "Press Start 2P", monospace';
+  // Show player lives as small hearts/dots
+  var redPlayers = players.filter(function(p) { return p.team === 0; });
+  var bluePlayers = players.filter(function(p) { return p.team === 1; });
+
+  var lx = 140;
+  redPlayers.forEach(function(p) {
+    for (var i = 0; i < MAX_LIVES; i++) {
+      ctx.fillStyle = (i < p.lives && p.alive) ? '#f55' : '#333';
+      ctx.fillRect(lx + i*8, 26, 5, 5);
+    }
+    lx += 35;
+  });
+
+  lx = W - 200;
+  bluePlayers.forEach(function(p) {
+    for (var i = 0; i < MAX_LIVES; i++) {
+      ctx.fillStyle = (i < p.lives && p.alive) ? '#58f' : '#333';
+      ctx.fillRect(lx + i*8, 26, 5, 5);
+    }
+    lx += 35;
+  });
+
+  // Points
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#888';
+  ctx.fillText(totalScore + ' PTS', W/2, 32);
+
+  // Match info for tournament
+  if (playerCount === 1 && maxMatches > 1) {
+    var matchNames = ['QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'];
+    ctx.fillStyle = '#666';
+    ctx.fillText(matchNames[Math.min(matchNum, 2)] || '', W/2, 38);
+  }
+}
+
+function drawCourt() {
+  // Parquet floor
+  var tileW = 20, tileH = 8;
+  for (var y = COURT_TOP; y < COURT_BOTTOM; y += tileH) {
+    for (var x = COURT_LEFT; x < COURT_RIGHT; x += tileW) {
+      var row = Math.floor((y - COURT_TOP) / tileH);
+      var offsetX = (row % 2) * (tileW / 2);
+      var shade = ((Math.floor((x + offsetX) / tileW) + row) % 2 === 0) ? '#8B6914' : '#A0791A';
+      ctx.fillStyle = shade;
+      ctx.fillRect(x, y, tileW, tileH);
+    }
+  }
+
+  // Court boundary lines (white)
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(COURT_LEFT, COURT_TOP, COURT_W, COURT_H);
+
+  // Centre line (red, or faded/dashed when ref is KO'd)
+  if (refDown) {
+    ctx.strokeStyle = 'rgba(200,60,60,0.25)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+  } else {
+    ctx.strokeStyle = '#e44';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+  }
+  ctx.beginPath();
+  ctx.moveTo(COURT_LEFT, CENTER_Y);
+  ctx.lineTo(COURT_RIGHT, CENTER_Y);
+  ctx.stroke();
+
+  // Centre circle
+  if (refDown) {
+    ctx.strokeStyle = 'rgba(200,60,60,0.25)';
+    ctx.lineWidth = 1;
+  } else {
+    ctx.strokeStyle = '#e44';
+    ctx.lineWidth = 2;
+  }
+  ctx.beginPath();
+  ctx.arc(COURT_LEFT + COURT_W/2, CENTER_Y, 40, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Bleachers at top - just a simple strip
+  ctx.fillStyle = '#2a2a3a';
+  ctx.fillRect(COURT_LEFT, COURT_TOP - 0, COURT_W, 0); // bleachers removed from view, scoreboard takes that space
+
+  // Simple crowd dots along top edge inside court
+  for (var i = 0; i < 25; i++) {
+    var cx = COURT_LEFT + 15 + i * (COURT_W - 30) / 24;
+    var cy = COURT_BOTTOM + 8;
+    var colors = ['#f55','#58f','#ffe44d','#0f0','#f0f','#0ff'];
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(cx - 3, cy - 3, 6, 6);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawScanlines() {
+  ctx.globalAlpha = 0.03;
+  for (var y = 0; y < H; y += 3) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, y, W, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlayer(p) {
+  ctx.save();
+
+  // Flash when invincible
+  if (p.invincibleTimer > 0 && Math.floor(p.invincibleTimer / 4) % 2 === 0) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  // Dodge trail
+  if (p.dodgeTimer > 0) {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = p.team === 0 ? '#f55' : '#58f';
+    ctx.beginPath();
+    ctx.arc(p.x - p.dodgeDirX * 10, p.y - p.dodgeDirY * 10, PLAYER_R, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Body circle
+  var color, darkColor;
+  if (p.isAz) {
+    color = '#00cc88'; darkColor = '#00aa66'; // Az green
+  } else if (p.team === 0) {
+    color = '#e44'; darkColor = '#a22';
+  } else {
+    color = '#48f'; darkColor = '#26a';
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(p.x + 2, p.y + PLAYER_R - 2, PLAYER_R, PLAYER_R * 0.4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, PLAYER_R, 0, Math.PI*2);
+  ctx.fill();
+
+  // Singlet stripe
+  ctx.fillStyle = darkColor;
+  ctx.fillRect(p.x - 4, p.y - 6, 8, 12);
+
+  // Head
+  ctx.fillStyle = '#fdb';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y - 4, 5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Eyes (direction indicator)
+  var ex = p.facingX, ey = p.facingY;
+  var el = Math.sqrt(ex*ex + ey*ey);
+  if (el > 0) { ex /= el; ey /= el; }
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(p.x + ex * 3 - 2, p.y - 4 + ey * 2, 1.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(p.x + ex * 3 + 2, p.y - 4 + ey * 2, 1.2, 0, Math.PI*2);
+  ctx.fill();
+
+  // Number on back
+  ctx.font = 'bold 7px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(p.id + 1, p.x, p.y + 3);
+
+  // Ball in hand indicator
+  if (p.hasBall) {
+    var bx = p.x + (p.facingX || 0) * (PLAYER_R + 4);
+    var by = p.y + (p.facingY || (p.team === 0 ? 1 : -1)) * (PLAYER_R + 4);
+    drawBall({ x: bx, y: by, speed: 0 });
+  }
+
+  // Dodge cooldown indicator
+  if (p.dodgeCooldown > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    var cdPct = p.dodgeCooldown / DODGE_COOLDOWN;
+    ctx.fillRect(p.x - PLAYER_R, p.y + PLAYER_R + 2, PLAYER_R * 2 * (1 - cdPct), 2);
+  }
+
+  // Bot / Az indicator
+  if (p.isBot) {
+    ctx.font = '5px sans-serif';
+    ctx.textAlign = 'center';
+    if (p.isAz) {
+      // Draw tiny Az spikes on head
+      ctx.fillStyle = '#00aa66';
+      for (var si = -1; si <= 1; si++) {
+        ctx.beginPath();
+        ctx.moveTo(p.x + si*4 - 2, p.y - 8);
+        ctx.lineTo(p.x + si*4, p.y - 13);
+        ctx.lineTo(p.x + si*4 + 2, p.y - 8);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#00cc88';
+      ctx.fillText('AZ', p.x, p.y + PLAYER_R + 10);
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.fillText('BOT', p.x, p.y + PLAYER_R + 10);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawBall(b) {
+  ctx.save();
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(b.x + 1, b.y + BALL_R, BALL_R, BALL_R * 0.4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Ball
+  ctx.fillStyle = '#f80';
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2);
+  ctx.fill();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.beginPath();
+  ctx.arc(b.x - 1.5, b.y - 1.5, BALL_R * 0.4, 0, Math.PI*2);
+  ctx.fill();
+
+  // Speed trail
+  if (b.speed > 3) {
+    ctx.strokeStyle = 'rgba(255,136,0,0.3)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - b.vx * 3, b.y - b.vy * 3);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHeart(cx, cy, size, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + size * 0.3);
+  ctx.bezierCurveTo(cx, cy - size * 0.3, cx - size, cy - size * 0.3, cx - size, cy + size * 0.1);
+  ctx.bezierCurveTo(cx - size, cy + size * 0.6, cx, cy + size, cx, cy + size);
+  ctx.bezierCurveTo(cx, cy + size, cx + size, cy + size * 0.6, cx + size, cy + size * 0.1);
+  ctx.bezierCurveTo(cx + size, cy - size * 0.3, cx, cy - size * 0.3, cx, cy + size * 0.3);
+  ctx.fill();
+}
+
+function drawReferee() {
+  ctx.save();
+  var r = referee;
+
+  if (!r.alive) {
+    // KO'd - flat on the ground with Xs for eyes
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(r.x - 12, r.y - 3, 24, 6);
+    ctx.fillStyle = '#fdb';
+    ctx.beginPath();
+    ctx.arc(r.x - 10, r.y - 1, 4, 0, Math.PI*2);
+    ctx.fill();
+    // X eyes
+    ctx.strokeStyle = '#e44';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(r.x - 12, r.y - 3); ctx.lineTo(r.x - 8, r.y + 1);
+    ctx.moveTo(r.x - 8, r.y - 3); ctx.lineTo(r.x - 12, r.y + 1);
+    ctx.stroke();
+    // Stars spinning
+    ctx.globalAlpha = 0.8;
+    var starAngle = frameCount * 0.08;
+    for (var i = 0; i < 4; i++) {
+      var sx = r.x + Math.cos(starAngle + i*1.57) * 16;
+      var sy = r.y - 12 + Math.sin(starAngle + i*1.57) * 8;
+      ctx.font = '8px sans-serif';
+      ctx.fillStyle = '#ffe44d';
+      ctx.fillText('*', sx, sy);
+    }
+    // "KO" text
+    ctx.font = 'bold 8px "Press Start 2P", monospace';
+    ctx.fillStyle = '#e44';
+    ctx.textAlign = 'center';
+    ctx.fillText('KO', r.x + 8, r.y - 8);
+  } else if (r.fallTimer > 0) {
+    // Fallen down temporarily
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(r.x - 10, r.y - 4, 20, 8);
+    ctx.fillStyle = '#fdb';
+    ctx.beginPath();
+    ctx.arc(r.x - 8, r.y, 4, 0, Math.PI*2);
+    ctx.fill();
+    // Stars
+    var starAngle = frameCount * 0.1;
+    for (var i = 0; i < 3; i++) {
+      var sx = r.x + Math.cos(starAngle + i*2.1) * 14;
+      var sy = r.y - 10 + Math.sin(starAngle + i*2.1) * 6;
+      ctx.font = '8px sans-serif';
+      ctx.fillStyle = '#ffe44d';
+      ctx.fillText('*', sx, sy);
+    }
+  } else if (r.spinTimer > 0) {
+    // Spinning
+    ctx.translate(r.x, r.y);
+    ctx.rotate(r.spinTimer * 0.3);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(-8, -8, 16, 16);
+    ctx.fillStyle = '#fdb';
+    ctx.beginPath();
+    ctx.arc(0, -6, 5, 0, Math.PI*2);
+    ctx.fill();
+    // Whistle
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(4, -4, 6, 3);
+  } else {
+    // Normal walking
+    ctx.fillStyle = '#222';
+    ctx.fillRect(r.x - 8, r.y - 8, 16, 16);
+    // Stripes on shirt
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(r.x - 6, r.y - 6, 12, 2);
+    ctx.fillRect(r.x - 6, r.y - 2, 12, 2);
+    ctx.fillRect(r.x - 6, r.y + 2, 12, 2);
+    // Head
+    ctx.fillStyle = '#fdb';
+    ctx.beginPath();
+    ctx.arc(r.x, r.y - 6, 5, 0, Math.PI*2);
+    ctx.fill();
+    // Whistle
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(r.x + 4, r.y - 4, 6, 3);
+  }
+
+  // Draw ref hearts above
+  if (r.alive) {
+    for (var i = 0; i < REF_MAX_LIVES; i++) {
+      var hx = r.x - (REF_MAX_LIVES * 5) + i * 10 + 5;
+      var hy = r.y - 20;
+      drawHeart(hx, hy, 4, i < r.lives ? '#e44' : '#333');
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawBallBoys() {
+  ballBoys.forEach(function(bb) {
+    ctx.save();
+    ctx.fillStyle = '#555';
+    ctx.fillRect(bb.x - 5, bb.y - 6, 10, 12);
+    ctx.fillStyle = '#fdb';
+    ctx.beginPath();
+    ctx.arc(bb.x, bb.y - 8, 4, 0, Math.PI*2);
+    ctx.fill();
+    // Cap
+    ctx.fillStyle = '#e44';
+    ctx.fillRect(bb.x - 4, bb.y - 12, 8, 4);
+    ctx.restore();
+  });
+}
+
+function drawCrowdRunner(cr) {
+  if (!cr.active) return;
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  // Running person
+  var legOffset = Math.sin(frameCount * 0.3) * 4;
+  ctx.fillStyle = cr.shirtColor || '#ddd';
+  ctx.fillRect(cr.x - 5, cr.y - 7, 10, 14);
+  ctx.fillStyle = '#fdb';
+  ctx.beginPath();
+  ctx.arc(cr.x, cr.y - 9, 5, 0, Math.PI*2);
+  ctx.fill();
+  // Legs
+  ctx.strokeStyle = '#997';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cr.x - 2, cr.y + 7);
+  ctx.lineTo(cr.x - 2 + legOffset, cr.y + 14);
+  ctx.moveTo(cr.x + 2, cr.y + 7);
+  ctx.lineTo(cr.x + 2 - legOffset, cr.y + 14);
+  ctx.stroke();
+  // Holding a ball?
+  if (cr.hasBall) {
+    ctx.fillStyle = '#f80';
+    ctx.beginPath();
+    ctx.arc(cr.x + 8, cr.y - 2, BALL_R, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.arc(cr.x + 7, cr.y - 3, BALL_R * 0.4, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ===== GAME LOOP =====
+function gameLoop() {
+  if (gameState === 'playing' || gameState === 'countdown') {
+    update();
+  }
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Start the loop
+gameLoop();
+</script>
+</body>
+</html>

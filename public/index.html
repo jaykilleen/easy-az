@@ -825,7 +825,7 @@
   <header class="store-header">
     <h1 class="store-name">EZ-AZ</h1>
     <p class="store-tagline">The Family Video Game Store</p>
-    <p class="store-version">20260302.1629 #2976572</p>
+    <p class="store-version">20260302.2100 #eedde5f</p>
   </header>
 
   <section class="az-section">
@@ -929,16 +929,20 @@
         </div>
       </a>
 
-      <div class="game-box coming-soon">
-        <div class="game-box-art placeholder">
-          <div class="placeholder-text">Coming<br>Soon</div>
+      <a href="/games/dodgeball.html" class="game-box">
+        <div class="game-box-art">
+          <canvas id="dodgeballCover" width="220" height="280"></canvas>
         </div>
         <div class="game-box-info">
-          <div class="game-box-title">???</div>
-          <div class="game-box-creators">By You?</div>
-          <div class="game-box-desc">This shelf spot is waiting for a game. Could it be yours?</div>
+          <div class="game-box-title">Dodgeball</div>
+          <div class="game-box-creators">By Lachie</div>
+          <div class="game-box-desc">
+            2v2 dodgeball. World Championship 1988. Up to 4 players on one keyboard!
+          </div>
+          <span class="game-box-badge">1-4 PLAYERS</span><br>
+          <span class="game-box-scores" data-game="dodgeball">High Scores</span>
         </div>
-      </div>
+      </a>
 
       <div class="game-box coming-soon">
         <div class="game-box-art placeholder">
@@ -1436,6 +1440,126 @@
   </script>
 
   <script>
+    // Draw the Dodgeball cover art on the canvas
+    (function () {
+      const canvas = document.getElementById('dodgeballCover');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Gymnasium floor background
+      for (let y = 0; y < H; y += 8) {
+        for (let x = 0; x < W; x += 20) {
+          const row = Math.floor(y / 8);
+          const offsetX = (row % 2) * 10;
+          const shade = ((Math.floor((x + offsetX) / 20) + row) % 2 === 0) ? '#6B4914' : '#805919';
+          ctx.fillStyle = shade;
+          ctx.fillRect(x, y, 20, 8);
+        }
+      }
+
+      // Centre line
+      ctx.strokeStyle = '#e44';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, H * 0.48);
+      ctx.lineTo(W, H * 0.48);
+      ctx.stroke();
+
+      // Court boundary
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 30, W - 20, H - 80);
+
+      // Centre circle
+      ctx.beginPath();
+      ctx.arc(W / 2, H * 0.48, 30, 0, Math.PI * 2);
+      ctx.strokeStyle = '#e44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Red player (top)
+      function drawPlayer(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fdb';
+        ctx.beginPath();
+        ctx.arc(x, y - 4, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawPlayer(80, 90, '#e44');
+      drawPlayer(150, 75, '#e44');
+      drawPlayer(70, 170, '#48f');
+      drawPlayer(160, 185, '#48f');
+
+      // Balls
+      function drawBall(x, y) {
+        ctx.fillStyle = '#f80';
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(x - 1.5, y - 1.5, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawBall(110, H * 0.48);
+      drawBall(W / 2, H * 0.48 - 8);
+      drawBall(160, H * 0.48 + 5);
+
+      // Speed lines from a thrown ball
+      ctx.strokeStyle = 'rgba(255,136,0,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(160, H * 0.48 + 5);
+      ctx.lineTo(150, 80);
+      ctx.stroke();
+
+      // Referee
+      ctx.fillStyle = '#222';
+      ctx.fillRect(W / 2 - 6, H * 0.48 - 6, 12, 12);
+      ctx.fillStyle = '#ddd';
+      ctx.fillRect(W / 2 - 4, H * 0.48 - 4, 8, 2);
+      ctx.fillRect(W / 2 - 4, H * 0.48, 8, 2);
+
+      // "1988" big text
+      ctx.save();
+      ctx.font = 'bold 40px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,228,77,0.15)';
+      ctx.fillText('1988', W / 2, H / 2 + 15);
+      ctx.restore();
+
+      // Title text
+      ctx.shadowColor = '#e44';
+      ctx.shadowBlur = 10;
+      ctx.font = 'bold 14px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('DODGEBALL', W / 2, H - 38);
+      ctx.font = 'bold 9px "Press Start 2P", monospace';
+      ctx.fillStyle = '#ffe44d';
+      ctx.fillText('WORLD CHAMP', W / 2, H - 20);
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
+      // Rating badge
+      ctx.fillStyle = '#ffe44d';
+      ctx.font = 'bold 10px "Press Start 2P", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('E', 12, 26);
+      ctx.strokeStyle = '#ffe44d';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(6, 12, 20, 20);
+    })();
+  </script>
+
+  <script>
     // Az speaks when you click his head
     (function() {
       const azLines = [
@@ -1547,7 +1671,8 @@
       var gameNames = {
         'space-dodge': 'Space Dodge',
         'bloom': 'Bloom',
-        'cat-vs-mouse': 'Cat vs Mouse'
+        'cat-vs-mouse': 'Cat vs Mouse',
+        'dodgeball': 'Dodgeball'
       };
 
       var timeGames = { bloom: true };

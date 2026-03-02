@@ -26,6 +26,10 @@ Built by **Charlie** (age 8) and his mate **Cooper**, with their friend **Jay Ki
 
 ## Games
 
+### Dodgeball - World Championship 1988
+
+A top-down 2v2 dodgeball game by Lachie (`public/games/dodgeball.html`). 1-4 players on one keyboard, with bots filling empty spots. Best of 3 rounds, tournament mode for 1-player with increasing difficulty. Features a wandering referee, crowd runners, and ball boys.
+
 ### Cat vs Mouse
 
 A rope puzzle game by Lil (`public/games/cat-vs-mouse.html`). Guide your cat, hook the pegs, and trap the mouse across 8 levels.

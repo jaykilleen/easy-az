@@ -129,6 +129,7 @@
   </div>
   <div class="lb-board" id="lbBoard"></div>
   <button class="lb-play-btn" id="lbPlayBtn">▶ PLAY AGAIN</button>
+  <button class="lb-play-btn" id="lbStoreBtn" style="background:#555;margin-top:6px;">BACK TO STORE</button>
 </div>
 
 <canvas id="gameCanvas" width="700" height="800"></canvas>
@@ -2096,6 +2097,9 @@ document.getElementById('lbNameInput').addEventListener('keydown', function(e) {
 document.getElementById('lbPlayBtn').addEventListener('click', function() {
   document.getElementById('lbPanel').classList.add('hidden');
   if (lbRestartFn) lbRestartFn();
+});
+document.getElementById('lbStoreBtn').addEventListener('click', function() {
+  window.location.href = '/';
 });
 
 // Load title screen leaderboard

@@ -1,7 +1,6 @@
 require "json"
 require "sqlite3"
 
-COUNTER_FILE ||= File.expand_path("data/counter.json", __dir__)
 DB_PATH ||= File.expand_path("data/leaderboard.sqlite3", __dir__)
 
 FileUtils.mkdir_p(File.dirname(DB_PATH))
@@ -19,6 +18,23 @@ unless defined?(DB)
     )
   SQL
   DB.execute "CREATE INDEX IF NOT EXISTS idx_scores_game ON scores(game)"
+  DB.execute <<~SQL
+    CREATE TABLE IF NOT EXISTS counters (
+      key TEXT PRIMARY KEY,
+      value INTEGER NOT NULL DEFAULT 0
+    )
+  SQL
+  DB.execute "INSERT OR IGNORE INTO counters (key, value) VALUES ('visitors', 0)"
+
+  # Migrate from JSON file if it exists and SQLite counter is still 0
+  counter_file = File.expand_path("data/counter.json", __dir__)
+  if File.exist?(counter_file)
+    current = DB.get_first_value("SELECT value FROM counters WHERE key = 'visitors'")
+    if current == 0
+      old_count = (JSON.parse(File.read(counter_file))["count"] rescue 0)
+      DB.execute("UPDATE counters SET value = ? WHERE key = 'visitors'", [old_count]) if old_count > 0
+    end
+  end
 end
 
 GAME_SORT ||= { "space-dodge" => "DESC", "bloom" => "ASC", "cat-vs-mouse" => "DESC" }.freeze
@@ -34,15 +50,8 @@ run lambda { |env|
 
   # Visitor counter
   if path == "/counter" && env["REQUEST_METHOD"] == "GET"
-    count = 0
-    File.open(COUNTER_FILE, File::RDWR | File::CREAT) do |f|
-      f.flock(File::LOCK_EX)
-      data = f.read
-      count = (JSON.parse(data)["count"] rescue 0) + 1
-      f.rewind
-      f.write(JSON.generate({ "count" => count }))
-      f.truncate(f.pos)
-    end
+    DB.execute("UPDATE counters SET value = value + 1 WHERE key = 'visitors'")
+    count = DB.get_first_value("SELECT value FROM counters WHERE key = 'visitors'")
     next [200, { "content-type" => "application/json", "cache-control" => "no-store" }, [JSON.generate({ "count" => count })]]
   end
 

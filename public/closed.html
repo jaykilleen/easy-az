@@ -363,6 +363,31 @@
     .help-link:hover {
       background: rgba(0, 255, 200, 0.1);
     }
+
+    .visitor-counter {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .counter-display {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: #33ff33;
+      background: #0a0a0a;
+      border: 1px solid #1a3a1a;
+      padding: 10px 20px;
+      border-radius: 4px;
+      letter-spacing: 3px;
+      text-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+    }
+
+    .counter-label {
+      font-size: 11px;
+      color: #555;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 
@@ -441,6 +466,11 @@
 
   <a href="/help.html" class="help-link">Want to submit a game? Find out how</a>
 
+  <div class="visitor-counter" id="visitorCounter" style="display:none;">
+    <div class="counter-display" id="counterDisplay"></div>
+    <p class="counter-label">visitors to the store</p>
+  </div>
+
   <script>
     function nextOpening() {
       var now = new Date();
@@ -505,6 +535,16 @@
 
     updateCountdown();
     setInterval(updateCountdown, 1000);
+  </script>
+
+  <script>
+    fetch('/counter')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('counterDisplay').textContent = data.count.toLocaleString();
+        document.getElementById('visitorCounter').style.display = '';
+      })
+      .catch(function() {});
   </script>
 
 </body>

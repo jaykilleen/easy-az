@@ -90,12 +90,32 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'href="/help.html"'
   end
 
+  # Store version format
+
+  def test_store_version_includes_sha_with_hash
+    get "/"
+    assert_match(/store-version[^<]*#[0-9a-f]+/, last_response.body)
+  end
+
   # Coming soon placeholders
 
   def test_index_has_coming_soon_boxes
     get "/"
     assert_includes last_response.body, "coming-soon"
     assert_includes last_response.body, "Coming"
+  end
+
+  # Descent page
+
+  def test_descent_returns_200
+    get "/games/descent.html"
+    assert_equal 200, last_response.status
+  end
+
+  def test_descent_serves_html
+    get "/games/descent.html"
+    assert_equal "text/html", last_response.content_type
+    assert_includes last_response.body, "Descent"
   end
 
   # 404 handling
@@ -269,6 +289,23 @@ class LeaderboardApiTest < Minitest::Test
     post "/api/scores", JSON.generate({ game: "dodgeball", name: "", value: 100 }), { "CONTENT_TYPE" => "application/json" }
     data = JSON.parse(last_response.body)
     assert_equal "LACHIE", data["scores"][0]["name"]
+  end
+
+  def test_get_scores_descent_sorted_asc
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["descent", "AAA", 90000])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["descent", "BBB", 45000])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["descent", "CCC", 120000])
+
+    get "/api/scores", game: "descent"
+    data = JSON.parse(last_response.body)
+    values = data["scores"].map { |s| s["value"] }
+    assert_equal [45000, 90000, 120000], values
+  end
+
+  def test_post_defaults_name_descent
+    post "/api/scores", JSON.generate({ game: "descent", name: "", value: 60000 }), { "CONTENT_TYPE" => "application/json" }
+    data = JSON.parse(last_response.body)
+    assert_equal "ANON", data["scores"][0]["name"]
   end
 
   def test_post_defaults_name_bloom

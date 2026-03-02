@@ -34,6 +34,10 @@ A top-down 2v2 dodgeball game by Lachie (`public/games/dodgeball.html`). 1-4 pla
 
 A rope puzzle game by Lil (`public/games/cat-vs-mouse.html`). Guide your cat, hook the pegs, and trap the mouse across 8 levels.
 
+### Descent
+
+A maze runner by Jaykill (`public/games/descent.html`). 1-player, procedurally generated floors with flashlight cone vision and fog of war. 4 selectable dinosaur characters (Slate, Pixel, Fern, Echo) each with unique visual themes and traits. Sprint with stamina, collect breadcrumbs, and find what Az lost at the bottom. Az appears as a rescue guide if you get lost. Scored by total time (ASC leaderboard).
+
 ### Charlie & Cooper's Space Dodge
 
 The first game in the EZ-AZ collection. A two-player co-op space shooter with:

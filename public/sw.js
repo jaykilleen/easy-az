@@ -1,8 +1,9 @@
-const CACHE_NAME = 'ez-az-20260227-2112';
+const CACHE_NAME = 'ez-az-20260302-1710';
 const SHELL = [
   '/',
   '/games/space-dodge.html',
   '/games/bloom.html',
+  '/games/cat-vs-mouse.html',
   '/help.html',
   '/prompt.html',
   '/licence.html',
@@ -33,8 +34,14 @@ self.addEventListener('activate', function (event) {
 
 self.addEventListener('fetch', function (event) {
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      return cached || fetch(event.request);
+    fetch(event.request).then(function (response) {
+      var clone = response.clone();
+      caches.open(CACHE_NAME).then(function (cache) {
+        cache.put(event.request, clone);
+      });
+      return response;
+    }).catch(function () {
+      return caches.match(event.request);
     })
   );
 });

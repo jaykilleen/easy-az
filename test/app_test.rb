@@ -101,12 +101,12 @@ class AppTest < Minitest::Test
 
   def test_root_has_cache_header
     get "/"
-    assert_equal "public, max-age=3600", last_response.headers["cache-control"]
+    assert_equal "no-cache", last_response.headers["cache-control"]
   end
 
   def test_game_has_cache_header
     get "/games/space-dodge.html"
-    assert_equal "public, max-age=3600", last_response.headers["cache-control"]
+    assert_equal "no-cache", last_response.headers["cache-control"]
   end
 end
 
@@ -118,6 +118,7 @@ class LeaderboardApiTest < Minitest::Test
   end
 
   def setup
+    app # ensure config.ru is loaded and DB is initialised
     DB.execute("DELETE FROM scores")
   end
 

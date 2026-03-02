@@ -22,9 +22,13 @@ The world is changing. AI is becoming part of how people do their jobs. Rather t
 
 ## Who built this?
 
-Built by **Charlie** (age 8) and his mate **Cooper**, with their Dad **Jay Killeen** helping them learn how to work with AI.
+Built by **Charlie** (age 8) and his mate **Cooper**, with their friend **Jay Killeen** helping them learn how to work with AI.
 
 ## Games
+
+### Cat vs Mouse
+
+A rope puzzle game by Lil (`public/games/cat-vs-mouse.html`). Guide your cat, hook the pegs, and trap the mouse across 8 levels.
 
 ### Charlie & Cooper's Space Dodge
 
@@ -37,6 +41,70 @@ The first game in the EZ-AZ collection. A two-player co-op space shooter with:
 - Leaderboard with name entry
 - Robot voice sings original lyrics during gameplay
 - Boss fight music changes per phase
+
+## Standard game features
+
+Every game on EZ-AZ should follow these patterns unless the game is a "chill" game (no scoring, exploration only, meditative). Chill games can skip leaderboards and scoring.
+
+### Store banner
+
+Every game page includes a fixed banner at the top linking back to the store:
+
+```html
+<div class="store-banner"><a href="/">EZ-AZ</a></div>
+```
+
+### Title screen
+
+- A start screen overlay that prevents the game from auto-playing
+- Controls instructions
+- A leaderboard section that fetches and displays the top 10 scores on page load
+- If no scores exist, show "No scores yet. Be the first!"
+- A "High Scores" button if the leaderboard isn't shown inline (e.g. Cat vs Mouse uses a panel overlay)
+
+### Leaderboard
+
+Games use a shared server-side leaderboard at `/api/scores`.
+
+Fetching scores:
+```javascript
+var r = await fetch('/api/scores?game=YOUR-GAME-SLUG');
+var d = await r.json();
+// d.scores is an array of { name, value }
+```
+
+Posting scores:
+```javascript
+await fetch('/api/scores', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ game: 'YOUR-GAME-SLUG', name: playerName, value: score })
+});
+```
+
+The game slug must be registered in `config.ru` in the `GAME_SORT` and `DEFAULT_NAMES` hashes. Games sorted DESC rank highest scores first (points-based games). Games sorted ASC rank lowest scores first (time-based games like Bloom).
+
+On the title screen, fetch the leaderboard on page load and render it read-only (no name entry, no score display, just the ranked list).
+
+On game over, show the player's score, check if they qualify for the top 10, and if so show a name entry input. After saving, highlight their entry in the leaderboard.
+
+Keep a local fallback in localStorage so the leaderboard still works if the server is unreachable.
+
+### Store shelf integration
+
+Each game gets a "High Scores" link on its game box in `public/index.html`. This opens a modal overlay that fetches `/api/scores?game=X` and renders the top 10. Time-based games (like Bloom) format scores as MM:SS.mmm. Points-based games show the value with "pts".
+
+### Pause and quit
+
+- Escape key pauses the game
+- Pause screen shows Resume and Quit buttons
+- Quit returns to the store (`window.location.href = '/'`)
+
+### Game over
+
+- Show the final score or time
+- Show the leaderboard with name entry if the player qualifies
+- Provide a way to play again and/or return to the store
 
 ## Tech Stack
 

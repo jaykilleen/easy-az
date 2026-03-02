@@ -255,7 +255,7 @@
         <li>A parent or guardian to help out</li>
         <li>A kid with a game idea</li>
         <li>An AI tool like <a href="https://claude.ai">Claude</a>, ChatGPT, or similar (optional -- hand coded games are welcome too!)</li>
-        <li>A <a href="https://github.com">GitHub</a> account (free)</li>
+        <li>A way to send us the file (email, Messenger, or a <a href="https://github.com">GitHub</a> account if you want to learn pull requests)</li>
       </ul>
     </section>
 
@@ -293,10 +293,46 @@
     </section>
 
     <section class="section">
-      <h2>Submit your game</h2>
+      <h2>Send us the file (easiest)</h2>
       <p>
-        When your game is ready, submit it through GitHub with a pull request.
-        Here's how:
+        When your game is ready, send it to us however works for you.
+      </p>
+      <ol class="steps-list">
+        <li>
+          <span class="step-number">1</span>
+          <span>
+            Build your game as a single HTML file
+          </span>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <span>
+            Send it to us by email, Messenger, or any way you can get it to us.
+            Find us on the <a href="https://github.com/jaykilleen/easy-az">EZ-AZ GitHub page</a>
+            or message Jay Killeen on Facebook
+          </span>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <span>
+            Include your gamer name and how old the kids are
+          </span>
+        </li>
+        <li>
+          <span class="step-number">4</span>
+          <span>
+            We'll review it, make sure it works, and put it on the shelf.
+            Your game, your name, up for everyone to play
+          </span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2>GitHub pull request (for those who want to learn)</h2>
+      <p>
+        If you want to learn how developers collaborate on code, you can
+        submit your game through GitHub instead.
       </p>
       <ol class="steps-list">
         <li>
@@ -323,8 +359,7 @@
         <li>
           <span class="step-number">4</span>
           <span>
-            We'll review it, make sure it works, and add it to the shelf.
-            Your game, your name, up for everyone to play
+            We'll review it, make sure it works, and add it to the shelf
           </span>
         </li>
       </ol>
@@ -338,6 +373,32 @@
     </section>
 
     <section class="section">
+      <h2>Standard game features</h2>
+      <p>
+        Every game on the shelf follows a few common patterns. Don't worry about
+        getting these perfect. We can help wire them up when you submit. But if
+        you want to include them from the start, here's what we use:
+      </p>
+      <ul>
+        <li><strong>Store banner</strong> -- a small fixed bar at the top of the page that links back to EZ-AZ</li>
+        <li><strong>Title screen</strong> -- a start screen overlay with controls, the game name, and a leaderboard showing the current top 10</li>
+        <li><strong>Leaderboard</strong> -- EZ-AZ has a shared leaderboard API. Your game fetches scores on load and lets players enter their name on game over if they make the top 10. We keep a localStorage fallback so it works offline too</li>
+        <li><strong>Pause and quit</strong> -- Escape key pauses. Resume and Quit buttons. Quit takes you back to the store</li>
+        <li><strong>Game over screen</strong> -- shows the final score or time, the leaderboard, and a way to play again</li>
+      </ul>
+      <p>
+        If your game is a chill game with no scoring (exploration, art, meditative),
+        you can skip the leaderboard. Not every game needs a score.
+      </p>
+      <div class="highlight-box tip">
+        <p>
+          The <a href="/prompt.html">AI starter prompt</a> includes all these
+          features built in. If you use it, your AI will set them up for you.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
       <h2>The rules</h2>
       <ul class="rules-list">
         <li>Must be a single HTML file, no external dependencies</li>
@@ -345,7 +406,7 @@
         <li>Must be built by kids, with help from adults (AI is welcome but not required)</li>
         <li>Must work in a modern web browser</li>
         <li>Come up with a cool gamer name to publish under (every great dev needs a pseudonym)</li>
-        <li>Include your gamer name and age in the pull request so we can credit you</li>
+        <li>Include your gamer name and age when you submit so we can credit you</li>
       </ul>
     </section>
   </main>
@@ -355,7 +416,7 @@
   </nav>
 
   <footer class="store-footer">
-    Built by Charlie and Cooper (aged 8), with their Dad Jay helping them learn to work with AI.<br>
+    Built by Charlie and Cooper (aged 8), with their friend Jay helping them learn to work with AI.<br>
     Gumdale's first family friendly video game store.<br>
     <a href="/licence.html">Licence</a>
   </footer>

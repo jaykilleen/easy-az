@@ -187,6 +187,22 @@ Technical requirements:
 - Use requestAnimationFrame for the game loop
 - Handle keyboard input with keydown/keyup event listeners
 
+Standard features (include these unless it's a chill/no-score game):
+
+1. Store banner: a fixed bar at the top of the page linking back to the store:
+   &lt;div class="store-banner"&gt;&lt;a href="/"&gt;EZ-AZ&lt;/a&gt;&lt;/div&gt;
+
+2. Leaderboard: EZ-AZ has a shared leaderboard API. Fetch top 10 scores on the title screen and show them read-only. On game over, let the player enter their name if they qualify for the top 10.
+   - Fetch: GET /api/scores?game=YOUR-GAME-SLUG (returns { scores: [{ name, value }] })
+   - Post: POST /api/scores with JSON body { game, name, value } (returns updated leaderboard)
+   - Keep a localStorage fallback so scores still show if the server is down
+   - If no scores exist yet, show "No scores yet. Be the first!"
+   - The game slug will be set when the game is added to the store (use a placeholder for now)
+
+3. Pause and quit: Escape key pauses. Show Resume and Quit buttons. Quit goes to window.location.href = '/'.
+
+4. Title screen leaderboard: fetch and display the leaderboard on the start screen so players can see high scores before playing.
+
 Please help me build this step by step:
 1. Start with a basic HTML file with canvas, a start screen overlay and a game loop. Get my main character on screen with keyboard movement.
 2. Add the core gameplay mechanic (dodging, shooting, jumping, whatever fits my idea).
@@ -195,9 +211,10 @@ Please help me build this step by step:
 5. Add sound effects using Web Audio API (oscillators and noise).
 6. Add background music using Web Audio API.
 7. Add a game over screen that shows the final score.
-8. Add power-ups or extra features to make it more fun.
-9. Polish the visuals with particle effects, screen shake, glowing colours.
-10. Final review: make sure everything is in one file and works on its own.
+8. Add the leaderboard: fetch scores for the title screen, show name entry on game over if the player qualifies, post the score to the API.
+9. Add power-ups or extra features to make it more fun.
+10. Polish the visuals with particle effects, screen shake, glowing colours.
+11. Final review: make sure everything is in one file and works on its own.
 
 After each step, show me the complete updated HTML file so I can test it in my browser.
 
@@ -209,7 +226,7 @@ Let's start with step 1. Keep it simple so I can see something working straight 
   </nav>
 
   <footer class="store-footer">
-    Built by Charlie and Cooper (aged 8), with their Dad Jay helping them learn to work with AI.<br>
+    Built by Charlie and Cooper (aged 8), with their friend Jay helping them learn to work with AI.<br>
     Gumdale's first family friendly video game store.<br>
     <a href="/licence.html">Licence</a>
   </footer>

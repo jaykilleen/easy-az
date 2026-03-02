@@ -21,8 +21,8 @@ unless defined?(DB)
   DB.execute "CREATE INDEX IF NOT EXISTS idx_scores_game ON scores(game)"
 end
 
-GAME_SORT ||= { "space-dodge" => "DESC", "bloom" => "ASC" }.freeze
-DEFAULT_NAMES ||= { "space-dodge" => "C&C", "bloom" => "ANON" }.freeze
+GAME_SORT ||= { "space-dodge" => "DESC", "bloom" => "ASC", "cat-vs-mouse" => "DESC" }.freeze
+DEFAULT_NAMES ||= { "space-dodge" => "C&C", "bloom" => "ANON", "cat-vs-mouse" => "ANON" }.freeze
 
 def fetch_top_scores(game)
   direction = GAME_SORT[game]
@@ -103,7 +103,8 @@ run lambda { |env|
       when ".webmanifest" then "application/manifest+json"
       else "application/octet-stream"
     end
-    [200, { "content-type" => content_type, "cache-control" => "public, max-age=3600" }, [File.read(file_path)]]
+    cache = ext == ".html" ? "no-cache" : "public, max-age=3600"
+    [200, { "content-type" => content_type, "cache-control" => cache }, [File.read(file_path)]]
   else
     [404, { "content-type" => "text/html" }, ["<h1>404 - Game not found</h1><p><a href='/'>Back to EZ-AZ</a></p>"]]
   end

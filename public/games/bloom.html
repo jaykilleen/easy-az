@@ -3,6 +3,7 @@
 <head>
 <script>
   (function() {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
     var d = new Date(), day = d.getDay(), hm = d.getHours() * 60 + d.getMinutes();
     var open = (day === 5 && hm >= 960 && hm < 1170)
            || (day === 6 && hm >= 450 && hm < 1170)
@@ -44,7 +45,11 @@
   .time-label { display: block; font-family: 'Press Start 2P', monospace; font-size: 9px; color: #aaa; margin-bottom: 6px; letter-spacing: 1px; }
   .time-value { font-family: 'Press Start 2P', monospace; font-size: 20px; color: #00ffc8; }
   .leaderboard { margin: 16px auto; max-width: 360px; text-align: left; }
+  .title-leaderboard { margin: 16px auto; max-width: 360px; text-align: left; }
   .leaderboard-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #ffe44d; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .lb-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #ffe44d; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .lb-empty { color: #555; font-size: 13px; padding: 8px 0; text-align: center; }
+  .lb-row.placeholder { color: #333; }
   .lb-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 13px; color: #aaa; font-family: 'Press Start 2P', monospace; }
   .lb-row.highlight { color: #00ffc8; background: rgba(0, 255, 200, 0.08); border-radius: 4px; }
   .lb-name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 10px; font-size: 14px; border-radius: 6px; width: 140px; font-family: 'Press Start 2P', monospace; margin-right: 8px; text-transform: uppercase; }
@@ -62,6 +67,7 @@
   <p>The world has lost its colour and music.<br>Find the hearts. Bring it back to life.</p>
   <button class="btn" onclick="startGame()">Play</button>
   <div class="info">Arrow keys or WASD to move<br>Hold Shift or Space to sprint<br>Escape to pause</div>
+  <div class="title-leaderboard" id="titleLeaderboard"></div>
 </div>
 <div id="quitDialog" class="overlay">
   <h1>Paused</h1>
@@ -220,10 +226,11 @@ function initAreas() {
     colourLerp: 0, bloomRadius: 0, bloomOrigin: null,
     elements: []
   };
-  // Store: open room
+  // Store: open room (gap in top wall for entrance from lake)
   areas.store = {
     walls: [
-      { x: 50, y: 50, w: 600, h: 20 },
+      { x: 50, y: 50, w: 270, h: 20 },
+      { x: 380, y: 50, w: 270, h: 20 },
       { x: 50, y: 50, w: 20, h: 600 },
       { x: 50, y: 630, w: 600, h: 20 },
       { x: 630, y: 50, w: 20, h: 600 },
@@ -1068,7 +1075,8 @@ document.addEventListener('keydown', function (e) {
   }
   // Escape to pause/resume
   if (e.key === 'Escape') {
-    if (state === 'playing') pauseGame();
+    if (state === 'title') window.location.href = '/';
+    else if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
   }
 });
@@ -1264,7 +1272,7 @@ async function saveScore() {
 function renderLeaderboard(board, highlightIdx) {
   var section = document.getElementById('leaderboardSection');
   if (board.length === 0) {
-    section.innerHTML = '';
+    section.innerHTML = '<div class="leaderboard-title">LEADERBOARD</div><div style="color:#555;font-size:13px;padding:8px 0;">No scores yet. Be the first!</div>';
     return;
   }
   var html = '<div class="leaderboard-title">LEADERBOARD</div>';
@@ -1276,6 +1284,23 @@ function renderLeaderboard(board, highlightIdx) {
   });
   section.innerHTML = html;
 }
+
+// Load leaderboard on title screen
+fetchLeaderboard().then(function (board) {
+  var el = document.getElementById('titleLeaderboard');
+  if (!el) return;
+  var html = '<div class="lb-title">LEADERBOARD</div>';
+  if (board.length === 0) {
+    html += '<div class="lb-empty">No scores yet. Be the first!</div>';
+  }
+  board.forEach(function (entry, i) {
+    html += '<div class="lb-row"><span>' + (i + 1) + '. ' + entry.name + '</span><span>' + formatTime(entry.time) + '</span></div>';
+  });
+  for (var i = board.length; i < 10; i++) {
+    html += '<div class="lb-row placeholder"><span>' + (i + 1) + '. ---</span><span>-</span></div>';
+  }
+  el.innerHTML = html;
+});
 
 // Game ideas for kids
 const gameIdeas = [

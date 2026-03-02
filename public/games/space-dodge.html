@@ -3,6 +3,7 @@
 <head>
 <script>
   (function() {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
     var d = new Date(), day = d.getDay(), hm = d.getHours() * 60 + d.getMinutes();
     var open = (day === 5 && hm >= 960 && hm < 1170)
            || (day === 6 && hm >= 450 && hm < 1170)
@@ -32,6 +33,11 @@
   #leaderboard li { color: #ddd; font-size: 16px; margin-bottom: 2px; }
   #leaderboard li span.s { color: #ff0; float: right; margin-left: 30px; }
   #leaderboard li.you { color: #0f0; }
+  .title-leaderboard { margin: 16px auto; max-width: 360px; text-align: left; }
+  .lb-title { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #ff0; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .lb-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 13px; color: #ddd; font-family: 'Press Start 2P', monospace; }
+  .lb-empty { color: #555; font-size: 13px; padding: 8px 0; text-align: center; }
+  .lb-row.placeholder { color: #333; }
   #nameEntry h2 { font-size: 32px; color: #0f0; margin-bottom: 6px; }
   #nameEntry input { font-size: 24px; padding: 8px 14px; border-radius: 8px; border: 2px solid #0f0; background: #111; color: #0f0; text-align: center; width: 220px; outline: none; text-transform: uppercase; letter-spacing: 3px; }
   .info { font-size: 12px; color: #666; margin-top: 6px; line-height: 1.8; }
@@ -58,7 +64,7 @@
     1 Player mode: use either controls!<br>
     Power-ups: <span style="color:#0ff">SHIELD</span> | <span style="color:#0f0">SLOW-MO</span> | <span style="color:#f0f">SPEED</span> | <span style="color:#f00">BLAST</span> | <span style="color:#f44">REVIVE</span> | <span style="color:#fa0">MEGA GUN</span>
   </div>
-  <div id="leaderboardStart"></div>
+  <div class="title-leaderboard" id="titleLeaderboard"></div>
 </div>
 <div id="nameEntry" class="overlay">
   <h2>NEW HIGH SCORE!</h2>
@@ -112,9 +118,17 @@ async function addLB(name, s) {
     saveLB(leaderboardCache);
   } catch { const lb = getLB(); lb.push({name,score:s}); lb.sort((a,b)=>b.score-a.score); lb.length = Math.min(lb.length,10); saveLB(lb); leaderboardCache = lb; }
 }
+function renderTitleLB() {
+  const lb = leaderboardCache, el = document.getElementById('titleLeaderboard');
+  let h = '<div class="lb-title">LEADERBOARD</div>';
+  if (!lb.length) { h+='<div class="lb-empty">No scores yet. Be the first!</div>'; }
+  lb.forEach((e,i) => { h+='<div class="lb-row"><span>'+(i+1)+'. '+e.name+'</span><span>'+e.score+' pts</span></div>'; });
+  for (let i=lb.length; i<10; i++) { h+='<div class="lb-row placeholder"><span>'+(i+1)+'. ---</span><span>-</span></div>'; }
+  el.innerHTML = h;
+}
 function renderLB(id, hl) {
   const lb = leaderboardCache, el = document.getElementById(id);
-  if (!lb.length) { el.innerHTML=''; return; }
+  if (!lb.length) { el.innerHTML='<div id="leaderboard"><h2>LEADERBOARD</h2><p style="color:#555;font-size:13px;">No scores yet. Be the first!</p></div>'; return; }
   let h = '<div id="leaderboard"><h2>LEADERBOARD</h2><ol>', done=false;
   lb.forEach(e => { const y=!done&&hl!==undefined&&e.score===hl; if(y)done=true; h+=`<li class="${y?'you':''}">${e.name} <span class="s">${e.score}</span></li>`; });
   el.innerHTML = h+'</ol></div>';
@@ -155,6 +169,7 @@ document.addEventListener('keydown', e => {
   if(e.code==='Escape'){
     if(paused){ resumeGame(); }
     else if(started && players && players.some(p=>p.alive)){ pauseGame(); }
+    else if(!started && document.getElementById('startScreen').style.display!=='none'){ window.location.href='/'; }
   }
 });
 document.addEventListener('keyup', e => keys[e.code]=false);
@@ -177,7 +192,7 @@ function quitGame(){
 }
 document.getElementById('quitYes').addEventListener('click', quitGame);
 document.getElementById('quitNo').addEventListener('click', resumeGame);
-fetchLB().then(() => renderLB('leaderboardStart'));
+fetchLB().then(() => renderTitleLB());
 
 function createPlayer(id,x,col,name) { return {id,x,y:H-90,w:32,h:40,baseSpeed:6,colour:col,name,alive:true,shootCooldown:0,invincible:0}; }
 

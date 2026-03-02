@@ -825,7 +825,7 @@
   <header class="store-header">
     <h1 class="store-name">EZ-AZ</h1>
     <p class="store-tagline">The Family Video Game Store</p>
-    <p class="store-version">20260302.2100 #eedde5f</p>
+    <p class="store-version">20260302.2300 #452d240</p>
   </header>
 
   <section class="az-section">
@@ -1601,7 +1601,8 @@
         const line = azLines[index];
         bubble.textContent = line;
 
-        const utterance = new SpeechSynthesisUtterance(line);
+        const spokenLine = line.replace(/EZ-AZ/g, 'Easy Az');
+        const utterance = new SpeechSynthesisUtterance(spokenLine);
         utterance.rate = 0.95;
         utterance.pitch = 1.4;
 

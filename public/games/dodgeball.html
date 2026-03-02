@@ -28,8 +28,8 @@
   .overlay p { font-size: 15px; color: #ccc; margin-bottom: 8px; line-height: 1.6; }
   .btn { margin: 6px; padding: 14px 32px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; transition: transform 0.1s; }
   .btn:hover { transform: scale(1.08); }
-  .btn-red { background: linear-gradient(135deg, #e44, #c22); }
-  .btn-blue { background: linear-gradient(135deg, #48f, #26c); }
+  .btn-teal { background: linear-gradient(135deg, #00ffc8, #00cc88); color: #0a0a12; }
+  .btn-purple { background: linear-gradient(135deg, #a855f7, #7c3aed); }
   .btn-gold { background: linear-gradient(135deg, #da3, #b80); }
   .btn-green { background: linear-gradient(135deg, #0c8, #0a6); }
   .btn-quit { background: linear-gradient(135deg, #c44, #a22); }
@@ -55,12 +55,13 @@
 
 <div id="titleScreen" class="overlay">
   <h1 style="color:#ffe44d;">DODGEBALL</h1>
-  <h2 style="color:#e44;">World Championship 1988</h2>
+  <h2 style="color:#ff6ec7;">World Championship 1988</h2>
+  <p style="color:#555;font-size:12px;">Neon City Gymnasium &mdash; Presented by EZ-AZ</p>
   <p>By Lachie</p>
   <p>Top-down 2v2 dodgeball. Pick up balls, throw, dodge, and dominate!</p>
   <div class="player-buttons">
-    <button class="btn btn-red" onclick="startGame(1)">1 PLAYER</button>
-    <button class="btn btn-blue" onclick="startGame(2)">2 PLAYERS</button>
+    <button class="btn btn-teal" onclick="startGame(1)">1 PLAYER</button>
+    <button class="btn btn-purple" onclick="startGame(2)">2 PLAYERS</button>
     <button class="btn btn-green" onclick="startGame(3)">3 PLAYERS</button>
     <button class="btn btn-gold" onclick="startGame(4)">4 PLAYERS</button>
   </div>
@@ -97,7 +98,15 @@ var PLAYER_SPEED = 2.8, BALL_SPEED = 7, BALL_DECEL = 0.04;
 var DODGE_SPEED = 8, DODGE_DURATION = 8, DODGE_COOLDOWN = 90;
 var INVINCIBLE_FRAMES = 60;
 var MAX_LIVES = 3;
-var NUM_BALLS = 3;
+var NUM_BALLS = 7;
+
+// Team colours - Az Teal vs Purple (synthwave)
+var TEAM_COLORS = [
+  { name: 'TEAL', color: '#00ffc8', dark: '#00cc88', light: '#66ffdd', scoreboard: '#00ffc8' },
+  { name: 'PURPLE', color: '#a855f7', dark: '#7c3aed', light: '#c084fc', scoreboard: '#a855f7' }
+];
+var BALL_COLOR = '#e33';
+var BALL_TRAIL = 'rgba(220,50,50,0.3)';
 
 // ===== AUDIO =====
 var audioCtx = null;
@@ -349,7 +358,7 @@ function spawnCrowdRunner() {
     hasBall: null, // stolen ball reference
     state: 'running', // running, chasing, throwing
     targetBall: null, throwTimer: 0,
-    shirtColor: ['#e44','#48f','#0c8','#f80','#f0f','#ff0'][Math.floor(Math.random()*6)]
+    shirtColor: ['#ff2d7b','#00ffc8','#a855f7','#ffe44d','#ff8800','#0ff'][Math.floor(Math.random()*6)]
   };
 }
 
@@ -755,9 +764,9 @@ function update() {
       balls.forEach(function(b) {
         if (!b.loose || b.held) return;
         var d = Math.hypot(b.x - cr.x, b.y - cr.y);
-        if (d < 100 && d < nearDist) { nearDist = d; nearBall = b; }
+        if (d < 160 && d < nearDist) { nearDist = d; nearBall = b; }
       });
-      if (nearBall && Math.random() < 0.02) {
+      if (nearBall && Math.random() < 0.06) {
         cr.state = 'chasing';
         cr.targetBall = nearBall;
       } else {
@@ -871,7 +880,7 @@ function endRound(winningTeam) {
 
   playSound('cheer');
 
-  var teamName = winningTeam === 0 ? 'RED' : 'BLUE';
+  var teamName = TEAM_COLORS[winningTeam].name;
   showAnnouncement(teamName + ' TEAM WINS ROUND!', 120);
 
   setTimeout(function() {
@@ -886,7 +895,7 @@ function endRound(winningTeam) {
 }
 
 function endMatch(winningTeam) {
-  var teamName = winningTeam === 0 ? 'RED' : 'BLUE';
+  var teamName = TEAM_COLORS[winningTeam].name;
 
   // Match win bonus
   if ((playerCount === 1 && winningTeam === 0) ||
@@ -942,11 +951,12 @@ function startCountdown() {
   tickCountdown();
 }
 
-function showGameOver() {
+async function showGameOver() {
   gameState = 'gameOver';
   stopBGM();
+  await fetchLB(); // refresh leaderboard before checking qualification
   var screen = document.getElementById('gameOverScreen');
-  var matchResult = scores[0] >= 2 ? 'RED TEAM WINS!' : 'BLUE TEAM WINS!';
+  var matchResult = scores[0] >= 2 ? TEAM_COLORS[0].name + ' TEAM WINS!' : TEAM_COLORS[1].name + ' TEAM WINS!';
   if (playerCount === 1 && matchNum >= maxMatches && scores[0] >= 2) {
     matchResult = 'YOU ARE THE 1988 WORLD CHAMPION!';
   }
@@ -1080,89 +1090,152 @@ function draw() {
 }
 
 function drawScoreboard() {
-  // Scoreboard background
-  ctx.fillStyle = '#111';
+  // Scoreboard background - dark with subtle teal border
+  ctx.fillStyle = '#0a0a12';
   ctx.fillRect(0, 0, W, COURT_TOP);
+  ctx.fillStyle = '#00ffc8';
+  ctx.fillRect(0, COURT_TOP - 1, W, 1);
 
-  // "WORLD DODGEBALL CHAMPIONSHIP 1988"
+  // Championship title
+  ctx.font = '6px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffe44d';
+  ctx.fillText('WORLD DODGEBALL CHAMPIONSHIP 1988', W/2, 11);
+
+  // Presented by EZ-AZ
+  ctx.font = '5px "Press Start 2P", monospace';
+  ctx.fillStyle = '#00ffc8';
+  ctx.globalAlpha = 0.5;
+  ctx.fillText('PRESENTED BY EZ-AZ', W/2, 19);
+  ctx.globalAlpha = 1;
+
+  // Team scores
+  ctx.font = '10px "Press Start 2P", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = TEAM_COLORS[0].scoreboard;
+  ctx.fillText(TEAM_COLORS[0].name + ' ' + scores[0], 40, 34);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = TEAM_COLORS[1].scoreboard;
+  ctx.fillText(scores[1] + ' ' + TEAM_COLORS[1].name, W - 40, 34);
+
+  // Lives display
+  var team0Players = players.filter(function(p) { return p.team === 0; });
+  var team1Players = players.filter(function(p) { return p.team === 1; });
+
+  var lx = 150;
+  team0Players.forEach(function(p) {
+    for (var i = 0; i < MAX_LIVES; i++) {
+      ctx.fillStyle = (i < p.lives && p.alive) ? TEAM_COLORS[0].color : '#1a1a2e';
+      ctx.fillRect(lx + i*8, 28, 5, 5);
+    }
+    lx += 35;
+  });
+
+  lx = W - 210;
+  team1Players.forEach(function(p) {
+    for (var i = 0; i < MAX_LIVES; i++) {
+      ctx.fillStyle = (i < p.lives && p.alive) ? TEAM_COLORS[1].color : '#1a1a2e';
+      ctx.fillRect(lx + i*8, 28, 5, 5);
+    }
+    lx += 35;
+  });
+
+  // Points (centre)
   ctx.font = '7px "Press Start 2P", monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffe44d';
-  ctx.fillText('WORLD DODGEBALL CHAMPIONSHIP 1988', W/2, 13);
-
-  // Scores
-  ctx.font = '10px "Press Start 2P", monospace';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#f55';
-  ctx.fillText('RED ' + scores[0], 40, 32);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#58f';
-  ctx.fillText(scores[1] + ' BLUE', W - 40, 32);
-
-  // Lives display
-  ctx.textAlign = 'center';
-  ctx.font = '7px "Press Start 2P", monospace';
-  // Show player lives as small hearts/dots
-  var redPlayers = players.filter(function(p) { return p.team === 0; });
-  var bluePlayers = players.filter(function(p) { return p.team === 1; });
-
-  var lx = 140;
-  redPlayers.forEach(function(p) {
-    for (var i = 0; i < MAX_LIVES; i++) {
-      ctx.fillStyle = (i < p.lives && p.alive) ? '#f55' : '#333';
-      ctx.fillRect(lx + i*8, 26, 5, 5);
-    }
-    lx += 35;
-  });
-
-  lx = W - 200;
-  bluePlayers.forEach(function(p) {
-    for (var i = 0; i < MAX_LIVES; i++) {
-      ctx.fillStyle = (i < p.lives && p.alive) ? '#58f' : '#333';
-      ctx.fillRect(lx + i*8, 26, 5, 5);
-    }
-    lx += 35;
-  });
-
-  // Points
-  ctx.font = '7px "Press Start 2P", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#888';
-  ctx.fillText(totalScore + ' PTS', W/2, 32);
+  ctx.fillText(totalScore + ' PTS', W/2, 34);
 
   // Match info for tournament
   if (playerCount === 1 && maxMatches > 1) {
     var matchNames = ['QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'];
-    ctx.fillStyle = '#666';
-    ctx.fillText(matchNames[Math.min(matchNum, 2)] || '', W/2, 38);
+    ctx.fillStyle = '#555';
+    ctx.fillText(matchNames[Math.min(matchNum, 2)] || '', W/2, 19);
   }
 }
 
 function drawCourt() {
-  // Parquet floor
-  var tileW = 20, tileH = 8;
-  for (var y = COURT_TOP; y < COURT_BOTTOM; y += tileH) {
-    for (var x = COURT_LEFT; x < COURT_RIGHT; x += tileW) {
-      var row = Math.floor((y - COURT_TOP) / tileH);
-      var offsetX = (row % 2) * (tileW / 2);
-      var shade = ((Math.floor((x + offsetX) / tileW) + row) % 2 === 0) ? '#8B6914' : '#A0791A';
-      ctx.fillStyle = shade;
-      ctx.fillRect(x, y, tileW, tileH);
-    }
-  }
+  // Fill entire game area with the EZ-AZ dark background
+  ctx.fillStyle = '#0a0a12';
+  ctx.fillRect(0, COURT_TOP, W, H - COURT_TOP);
 
-  // Court boundary lines (white)
-  ctx.strokeStyle = '#ddd';
+  // Court floor - dark matte, like a premium indoor court
+  var floorGrad = ctx.createLinearGradient(0, COURT_TOP, 0, COURT_BOTTOM);
+  floorGrad.addColorStop(0, '#141420');
+  floorGrad.addColorStop(0.5, '#16162a');
+  floorGrad.addColorStop(1, '#121220');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(COURT_LEFT, COURT_TOP, COURT_W, COURT_H);
+
+  // Team half tints - very subtle
+  ctx.globalAlpha = 0.04;
+  ctx.fillStyle = TEAM_COLORS[0].color;
+  ctx.fillRect(COURT_LEFT, COURT_TOP, COURT_W, COURT_H / 2);
+  ctx.fillStyle = TEAM_COLORS[1].color;
+  ctx.fillRect(COURT_LEFT, CENTER_Y, COURT_W, COURT_H / 2);
+  ctx.globalAlpha = 1;
+
+  // EZ-AZ centre court branding (main sponsor)
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.font = 'bold 56px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#00ffc8';
+  ctx.fillText('EZ-AZ', COURT_LEFT + COURT_W/2, CENTER_Y - 10);
+  ctx.font = '9px "Press Start 2P", monospace';
+  ctx.fillStyle = '#ffe44d';
+  ctx.globalAlpha = 0.06;
+  ctx.fillText('NEON CITY GYMNASIUM', COURT_LEFT + COURT_W/2, CENTER_Y + 16);
+  ctx.restore();
+
+  // Corner EZ-AZ logos
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.font = '8px "Press Start 2P", monospace';
+  ctx.fillStyle = '#00ffc8';
+  ctx.textAlign = 'left';
+  ctx.fillText('EZ-AZ', COURT_LEFT + 8, COURT_TOP + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('EZ-AZ', COURT_RIGHT - 8, COURT_TOP + 14);
+  ctx.textAlign = 'left';
+  ctx.fillText('EZ-AZ', COURT_LEFT + 8, COURT_BOTTOM - 6);
+  ctx.textAlign = 'right';
+  ctx.fillText('EZ-AZ', COURT_RIGHT - 8, COURT_BOTTOM - 6);
+  ctx.restore();
+
+  // Court boundary lines - neon teal (EZ-AZ brand)
+  ctx.shadowColor = '#00ffc8';
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = '#00ffc8';
   ctx.lineWidth = 2;
   ctx.strokeRect(COURT_LEFT, COURT_TOP, COURT_W, COURT_H);
+  ctx.shadowBlur = 0;
 
-  // Centre line (red, or faded/dashed when ref is KO'd)
+  // Inner boundary lines (key areas)
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = '#00ffc8';
+  ctx.lineWidth = 1;
+  // Top team zone line
+  ctx.beginPath();
+  ctx.moveTo(COURT_LEFT, COURT_TOP + COURT_H * 0.15);
+  ctx.lineTo(COURT_RIGHT, COURT_TOP + COURT_H * 0.15);
+  ctx.stroke();
+  // Bottom team zone line
+  ctx.beginPath();
+  ctx.moveTo(COURT_LEFT, COURT_BOTTOM - COURT_H * 0.15);
+  ctx.lineTo(COURT_RIGHT, COURT_BOTTOM - COURT_H * 0.15);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Centre line (hot pink / EZ-AZ accent, or faded when ref KO'd)
   if (refDown) {
-    ctx.strokeStyle = 'rgba(200,60,60,0.25)';
+    ctx.strokeStyle = 'rgba(255,110,199,0.15)';
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 8]);
   } else {
-    ctx.strokeStyle = '#e44';
+    ctx.shadowColor = '#ff6ec7';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#ff6ec7';
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
   }
@@ -1170,13 +1243,14 @@ function drawCourt() {
   ctx.moveTo(COURT_LEFT, CENTER_Y);
   ctx.lineTo(COURT_RIGHT, CENTER_Y);
   ctx.stroke();
+  ctx.shadowBlur = 0;
 
   // Centre circle
   if (refDown) {
-    ctx.strokeStyle = 'rgba(200,60,60,0.25)';
+    ctx.strokeStyle = 'rgba(255,110,199,0.15)';
     ctx.lineWidth = 1;
   } else {
-    ctx.strokeStyle = '#e44';
+    ctx.strokeStyle = '#ff6ec7';
     ctx.lineWidth = 2;
   }
   ctx.beginPath();
@@ -1184,18 +1258,17 @@ function drawCourt() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Bleachers at top - just a simple strip
-  ctx.fillStyle = '#2a2a3a';
-  ctx.fillRect(COURT_LEFT, COURT_TOP - 0, COURT_W, 0); // bleachers removed from view, scoreboard takes that space
-
-  // Simple crowd dots along top edge inside court
-  for (var i = 0; i < 25; i++) {
-    var cx = COURT_LEFT + 15 + i * (COURT_W - 30) / 24;
+  // Crowd along bottom edge - animated spectators
+  for (var i = 0; i < 40; i++) {
+    var cx = COURT_LEFT + 8 + i * ((COURT_W - 16) / 39);
     var cy = COURT_BOTTOM + 8;
-    var colors = ['#f55','#58f','#ffe44d','#0f0','#f0f','#0ff'];
-    ctx.fillStyle = colors[i % colors.length];
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(cx - 3, cy - 3, 6, 6);
+    var crowdColors = ['#ff6ec7','#00ffc8','#a855f7','#ffe44d','#0ff','#f0f','#ff8800'];
+    ctx.fillStyle = crowdColors[i % crowdColors.length];
+    ctx.globalAlpha = 0.4 + Math.sin(frameCount * 0.05 + i) * 0.15;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(cx - 2, cy + 3, 4, 4);
   }
   ctx.globalAlpha = 1;
 }
@@ -1220,7 +1293,7 @@ function drawPlayer(p) {
   // Dodge trail
   if (p.dodgeTimer > 0) {
     ctx.globalAlpha = 0.3;
-    ctx.fillStyle = p.team === 0 ? '#f55' : '#58f';
+    ctx.fillStyle = TEAM_COLORS[p.team].color;
     ctx.beginPath();
     ctx.arc(p.x - p.dodgeDirX * 10, p.y - p.dodgeDirY * 10, PLAYER_R, 0, Math.PI*2);
     ctx.fill();
@@ -1228,26 +1301,26 @@ function drawPlayer(p) {
   }
 
   // Body circle
-  var color, darkColor;
-  if (p.isAz) {
-    color = '#00cc88'; darkColor = '#00aa66'; // Az green
-  } else if (p.team === 0) {
-    color = '#e44'; darkColor = '#a22';
-  } else {
-    color = '#48f'; darkColor = '#26a';
-  }
+  var color = TEAM_COLORS[p.team].color;
+  var darkColor = TEAM_COLORS[p.team].dark;
 
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.beginPath();
   ctx.ellipse(p.x + 2, p.y + PLAYER_R - 2, PLAYER_R, PLAYER_R * 0.4, 0, 0, Math.PI*2);
   ctx.fill();
+
+  // Neon glow under player
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 6;
 
   // Body
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(p.x, p.y, PLAYER_R, 0, Math.PI*2);
   ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
 
   // Singlet stripe
   ctx.fillStyle = darkColor;
@@ -1319,26 +1392,26 @@ function drawPlayer(p) {
 function drawBall(b) {
   ctx.save();
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.beginPath();
   ctx.ellipse(b.x + 1, b.y + BALL_R, BALL_R, BALL_R * 0.4, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // Ball
-  ctx.fillStyle = '#f80';
+  // Ball - red
+  ctx.fillStyle = BALL_COLOR;
   ctx.beginPath();
   ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2);
   ctx.fill();
 
   // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.beginPath();
   ctx.arc(b.x - 1.5, b.y - 1.5, BALL_R * 0.4, 0, Math.PI*2);
   ctx.fill();
 
   // Speed trail
   if (b.speed > 3) {
-    ctx.strokeStyle = 'rgba(255,136,0,0.3)';
+    ctx.strokeStyle = BALL_TRAIL;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y);
@@ -1466,7 +1539,7 @@ function drawBallBoys() {
     ctx.arc(bb.x, bb.y - 8, 4, 0, Math.PI*2);
     ctx.fill();
     // Cap
-    ctx.fillStyle = '#e44';
+    ctx.fillStyle = '#ff2d7b';
     ctx.fillRect(bb.x - 4, bb.y - 12, 8, 4);
     ctx.restore();
   });
@@ -1495,7 +1568,7 @@ function drawCrowdRunner(cr) {
   ctx.stroke();
   // Holding a ball?
   if (cr.hasBall) {
-    ctx.fillStyle = '#f80';
+    ctx.fillStyle = BALL_COLOR;
     ctx.beginPath();
     ctx.arc(cr.x + 8, cr.y - 2, BALL_R, 0, Math.PI*2);
     ctx.fill();

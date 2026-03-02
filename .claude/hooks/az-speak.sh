@@ -25,6 +25,8 @@ text=$(echo "$payload" | jq -r '.last_assistant_message // empty' 2>/dev/null \
   | sed 's/^#.*//g' \
   | sed 's/|[^|]*|//g' \
   | sed '/^$/d' \
+  | sed 's/EZ-AZ/Easy Az/g' \
+  | sed 's/ez-az/easy az/g' \
   | head -c "$MAX_CHARS")
 
 if [ -z "$text" ]; then

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ez-az-20260303-2100';
+const CACHE_NAME = 'ez-az-20260304-0800';
 const SHELL = [
   '/',
   '/games/space-dodge.html',

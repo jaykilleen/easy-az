@@ -63,9 +63,12 @@ input[type="text"]{background:#111;border:1px solid #333;color:#fff;padding:8px 
       </div>
     </div>
     <table class="controls-table">
-      <tr><td><span class="key">WASD / Arrows</span></td><td>Move</td></tr>
-      <tr><td><span class="key">Shift</span></td><td>Attack</td></tr>
-      <tr><td><span class="key">Space / Q / R-Ctrl</span></td><td>Block</td></tr>
+      <tr><td colspan="2" style="color:#666;font-size:11px;padding-bottom:4px">1P: Click game to enable mouse</td></tr>
+      <tr><td><span class="key">WASD + Mouse</span></td><td>Move + Look</td></tr>
+      <tr><td><span class="key">Arrows</span></td><td>Move + Strafe</td></tr>
+      <tr><td><span class="key">Left Click / Shift</span></td><td>Attack</td></tr>
+      <tr><td><span class="key">Right Click / Space</span></td><td>Block</td></tr>
+      <tr><td><span class="key">R</span></td><td>Sprint (1P)</td></tr>
       <tr><td><span class="key">Escape</span></td><td>Pause</td></tr>
     </table>
     <div class="lb-wrap">
@@ -423,7 +426,11 @@ function createPlayer(id) {
     rotSpeed: 0.025,
     damageFlash: 0,
     bobPhase: 0,
-    isMoving: false
+    isMoving: false,
+    stamina: 100, maxStamina: 100,
+    sprinting: false,
+    slowTimer: 0,
+    pitch: 0
   };
 }
 
@@ -439,18 +446,66 @@ var worldIntroTimer = 0;
 var noDamageBoss = true;
 var killedCount = 0;
 
+// Floating text pop-ups (kill confirmations)
+var floatingTexts = [];
+// Loot pickup notifications
+var notifications = [];
+// Combo system
+var comboCount = 0;
+var comboTimer = 0;
+var comboMultiplier = 1;
+// Damage direction indicators
+var damageIndicators = [];
+// Lava fire trails
+var fireTrails = [];
+// Boss intro
+var bossIntroPlayed = false;
+var bossIntroTimer = 0;
+
 // Input
 var keys = {};
+var mouseActive = false;
+var mouseDX = 0;
+var mouseDY = 0;
+var mouseButtons = { left: false, right: false };
+
 document.addEventListener('keydown', function(e) {
   keys[e.code] = true;
   if (e.code === 'Escape') {
-    if (state === 'playing') { state = 'paused'; document.getElementById('pauseOverlay').style.display = 'flex'; }
+    if (state === 'playing') { state = 'paused'; document.getElementById('pauseOverlay').style.display = 'flex'; if (document.pointerLockElement) document.exitPointerLock(); }
     else if (state === 'paused') resumeGame();
   }
   if (state === 'title' || state === 'gameover') return;
   e.preventDefault();
 });
 document.addEventListener('keyup', function(e) { keys[e.code] = false; });
+
+// Mouse controls (1P only)
+canvas.addEventListener('click', function() {
+  if (state === 'playing' && numPlayers === 1 && !document.pointerLockElement) {
+    canvas.requestPointerLock();
+  }
+});
+document.addEventListener('pointerlockchange', function() {
+  mouseActive = !!document.pointerLockElement;
+  if (!mouseActive) { mouseButtons.left = false; mouseButtons.right = false; }
+});
+document.addEventListener('mousemove', function(e) {
+  if (mouseActive && state === 'playing') {
+    mouseDX += e.movementX;
+    mouseDY += e.movementY;
+  }
+});
+document.addEventListener('mousedown', function(e) {
+  if (!mouseActive) return;
+  if (e.button === 0) mouseButtons.left = true;
+  if (e.button === 2) mouseButtons.right = true;
+});
+document.addEventListener('mouseup', function(e) {
+  if (e.button === 0) mouseButtons.left = false;
+  if (e.button === 2) mouseButtons.right = false;
+});
+canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 // ========== AUDIO ==========
 var audioCtx = null;
@@ -479,20 +534,24 @@ function playSound(freq, type, duration, vol, detune) {
   osc.stop(audioCtx.currentTime + (duration || 0.2));
 }
 
-function playPunch() { playSound(120, 'sawtooth', 0.12, 0.15); playSound(80, 'square', 0.08, 0.1); }
-function playSwordSwing() { playSound(200, 'sawtooth', 0.15, 0.12); playSound(300, 'triangle', 0.1, 0.08); }
-function playZombieHit() { playSound(90, 'sawtooth', 0.15, 0.1, Math.random()*200-100); }
-function playZombieDeath() { playSound(60, 'sawtooth', 0.3, 0.15); playSound(40, 'square', 0.4, 0.1); }
-function playPlayerHit() { playSound(150, 'square', 0.1, 0.15); playSound(100, 'sawtooth', 0.15, 0.1); }
+// Sound helpers with variation
+function rPitch(base) { return base + (Math.random() - 0.5) * base * 0.3; }
+function rDur(base) { return base + (Math.random() - 0.5) * base * 0.2; }
+
+function playPunch() { playSound(rPitch(120), 'sawtooth', rDur(0.12), 0.15); playSound(rPitch(80), 'square', rDur(0.08), 0.1); }
+function playSwordSwing() { playSound(rPitch(200), 'sawtooth', rDur(0.15), 0.12); playSound(rPitch(300), 'triangle', rDur(0.1), 0.08); }
+function playZombieHit() { playSound(rPitch(90), 'sawtooth', rDur(0.15), 0.1, Math.random()*200-100); }
+function playZombieDeath() { playSound(rPitch(60), 'sawtooth', rDur(0.3), 0.15); playSound(rPitch(40), 'square', rDur(0.4), 0.1); }
+function playPlayerHit() { playSound(rPitch(150), 'square', rDur(0.1), 0.15); playSound(rPitch(100), 'sawtooth', rDur(0.15), 0.1); }
 function playLootPickup() { playSound(440, 'sine', 0.1, 0.12); setTimeout(function(){playSound(660, 'sine', 0.15, 0.12);}, 80); }
-function playBossRoar() { playSound(50, 'sawtooth', 0.5, 0.2); playSound(70, 'square', 0.4, 0.15); }
+function playBossRoar() { playSound(rPitch(50), 'sawtooth', 0.5, 0.2); playSound(rPitch(70), 'square', 0.4, 0.15); }
 function playBossDeath() {
   playSound(200, 'sine', 0.2, 0.15);
   setTimeout(function(){playSound(300, 'sine', 0.2, 0.15);}, 150);
   setTimeout(function(){playSound(400, 'sine', 0.3, 0.15);}, 300);
 }
-function playBlock() { playSound(800, 'square', 0.05, 0.08); playSound(600, 'triangle', 0.08, 0.06); }
-function playFootstep() { playSound(60 + Math.random()*20, 'square', 0.04, 0.03); }
+function playBlock() { playSound(rPitch(800), 'square', 0.05, 0.08); playSound(rPitch(600), 'triangle', 0.08, 0.06); }
+function playFootstep() { playSound(60 + Math.random()*30, 'square', 0.03 + Math.random()*0.02, 0.03); }
 
 // Ambient drone
 var ambientOscs = [];
@@ -578,6 +637,15 @@ function loadWorld(idx) {
   allZombiesDead = false;
   noDamageBoss = true;
   killedCount = 0;
+  floatingTexts = [];
+  notifications = [];
+  damageIndicators = [];
+  fireTrails = [];
+  comboCount = 0;
+  comboTimer = 0;
+  comboMultiplier = 1;
+  bossIntroPlayed = false;
+  bossIntroTimer = 0;
 
   // Set player spawns
   players[0].x = 1.5; players[0].y = 1.5;
@@ -684,17 +752,47 @@ function updatePlayer(p, dt) {
 
   var moveF = 0, moveS = 0, rot = 0;
   p.blocking = false;
+  p.sprinting = false;
   p.isMoving = false;
   var doAttack = false;
 
   if (p.id === 0) {
-    // Player 1: Arrows + Right Shift/Ctrl (or WASD + LShift in 1P)
-    if (keys['ArrowUp'] || (numPlayers === 1 && keys['KeyW'])) moveF = 1;
-    if (keys['ArrowDown'] || (numPlayers === 1 && keys['KeyS'])) moveF = -1;
-    if (keys['ArrowLeft'] || (numPlayers === 1 && keys['KeyA'])) rot = -1;
-    if (keys['ArrowRight'] || (numPlayers === 1 && keys['KeyD'])) rot = 1;
-    if (keys['ShiftRight'] || (numPlayers === 1 && keys['ShiftLeft'])) doAttack = true;
-    if (keys['ControlRight'] || (numPlayers === 1 && keys['Space'])) p.blocking = true;
+    if (numPlayers === 1) {
+      // 1P controls: WASD + mouse, or WASD + arrows
+      if (keys['KeyW']) moveF = 1;
+      if (keys['KeyS']) moveF = -1;
+      if (mouseActive) {
+        // Mouse active: A/D strafe, mouse rotates
+        if (keys['KeyA']) moveS = -1;
+        if (keys['KeyD']) moveS = 1;
+        if (mouseButtons.left) doAttack = true;
+        if (mouseButtons.right) p.blocking = true;
+      } else {
+        // No mouse: A/D rotate
+        if (keys['KeyA']) rot = -1;
+        if (keys['KeyD']) rot = 1;
+      }
+      // Arrow keys: up/down move, left/right strafe
+      if (keys['ArrowUp']) moveF = 1;
+      if (keys['ArrowDown']) moveF = -1;
+      if (keys['ArrowLeft']) moveS = -1;
+      if (keys['ArrowRight']) moveS = 1;
+      // Keyboard attack/block still work alongside mouse
+      if (keys['ShiftLeft'] || keys['ShiftRight']) doAttack = true;
+      if (keys['Space']) p.blocking = true;
+      // Q/E strafe, R sprint
+      if (keys['KeyQ']) moveS = -1;
+      if (keys['KeyE']) moveS = 1;
+      if (keys['KeyR'] && !p.blocking) p.sprinting = true;
+    } else {
+      // 2P: P1 uses arrows + right modifiers
+      if (keys['ArrowUp']) moveF = 1;
+      if (keys['ArrowDown']) moveF = -1;
+      if (keys['ArrowLeft']) rot = -1;
+      if (keys['ArrowRight']) rot = 1;
+      if (keys['ShiftRight']) doAttack = true;
+      if (keys['ControlRight']) p.blocking = true;
+    }
   } else {
     // Player 2: WASD + Left Shift + Q
     if (keys['KeyW']) moveF = 1;
@@ -708,7 +806,23 @@ function updatePlayer(p, dt) {
   // Block slows movement
   var spd = p.blocking ? p.moveSpeed * 0.5 : p.moveSpeed;
 
-  // Rotation
+  // Sprint
+  if (p.sprinting && p.stamina > 0 && (moveF !== 0 || moveS !== 0)) {
+    spd *= 1.6;
+    p.stamina -= 0.8;
+    if (p.stamina < 0) p.stamina = 0;
+  } else {
+    p.sprinting = false;
+    if (p.stamina < p.maxStamina) p.stamina = Math.min(p.maxStamina, p.stamina + 0.3);
+  }
+
+  // Cryo slow effect
+  if (p.slowTimer > 0) {
+    spd *= 0.5;
+    p.slowTimer--;
+  }
+
+  // Rotation (keyboard)
   if (rot !== 0) {
     var rs = p.rotSpeed * rot;
     var oldDX = p.dirX, oldPX = p.planeX;
@@ -716,6 +830,24 @@ function updatePlayer(p, dt) {
     p.dirY = oldDX * Math.sin(rs) + p.dirY * Math.cos(rs);
     p.planeX = p.planeX * Math.cos(rs) - p.planeY * Math.sin(rs);
     p.planeY = oldPX * Math.sin(rs) + p.planeY * Math.cos(rs);
+  }
+
+  // Mouse look (1P only, consumes accumulated mouse movement)
+  if (mouseActive && p.id === 0) {
+    if (mouseDX !== 0) {
+      var mrs = mouseDX * 0.0012;
+      var oldDX2 = p.dirX, oldPX2 = p.planeX;
+      p.dirX = p.dirX * Math.cos(mrs) - p.dirY * Math.sin(mrs);
+      p.dirY = oldDX2 * Math.sin(mrs) + p.dirY * Math.cos(mrs);
+      p.planeX = p.planeX * Math.cos(mrs) - p.planeY * Math.sin(mrs);
+      p.planeY = oldPX2 * Math.sin(mrs) + p.planeY * Math.cos(mrs);
+      mouseDX = 0;
+    }
+    if (mouseDY !== 0) {
+      p.pitch -= mouseDY * 0.8;
+      p.pitch = Math.max(-120, Math.min(120, p.pitch));
+      mouseDY = 0;
+    }
   }
 
   // Movement with wall collision
@@ -732,6 +864,18 @@ function updatePlayer(p, dt) {
       nextWorld();
       return;
     }
+  }
+
+  // Strafe movement (perpendicular to direction)
+  if (moveS !== 0) {
+    p.isMoving = true;
+    var sx = -p.dirY * spd * moveS;
+    var sy = p.dirX * spd * moveS;
+    var snx = p.x + sx, sny = p.y + sy;
+    var margin = 0.2;
+    if (!isWall(snx + margin * (snx > p.x ? 1 : -1), p.y)) p.x = snx;
+    if (!isWall(p.x, sny + margin * (sny > p.y ? 1 : -1))) p.y = sny;
+    if (exitActive && isExit(p.x, p.y)) { nextWorld(); return; }
   }
 
   // Walking bob
@@ -793,11 +937,32 @@ function performAttack(p) {
     playZombieHit();
     shakeTimer = 5; shakeIntensity = 3;
 
+    // Knockback
+    var kbDX = bestZ.x - p.x, kbDY = bestZ.y - p.y;
+    var kbD = Math.sqrt(kbDX*kbDX + kbDY*kbDY);
+    if (kbD > 0.01) {
+      var kbDist = bestZ.isBoss ? 0.2 : 0.4;
+      var kbNX = bestZ.x + (kbDX/kbD) * kbDist;
+      var kbNY = bestZ.y + (kbDY/kbD) * kbDist;
+      if (!isWall(kbNX, bestZ.y)) bestZ.x = kbNX;
+      if (!isWall(bestZ.x, kbNY)) bestZ.y = kbNY;
+    }
+
     if (bestZ.hp <= 0) {
       bestZ.state = 'dead';
       bestZ.deadTimer = 60;
       playZombieDeath();
       killedCount++;
+
+      // Combo system
+      if (comboTimer > 0) {
+        comboCount++;
+        comboMultiplier = 1 + comboCount * 0.25;
+      } else {
+        comboCount = 0;
+        comboMultiplier = 1;
+      }
+      comboTimer = 90;
 
       // Score
       var baseScore = 100 + currentWorld * 50;
@@ -808,23 +973,27 @@ function performAttack(p) {
         exitActive = true;
         playBossDeath();
       }
-      score += baseScore;
+      var earnedScore = Math.floor(baseScore * comboMultiplier);
+      score += earnedScore;
+
+      // Kill confirmation pop-up
+      floatingTexts.push({ x: bestZ.x, y: bestZ.y, text: '+' + earnedScore, timer: 45, color: comboMultiplier > 1 ? '#ffcc00' : '#fff' });
+      if (comboMultiplier > 1) {
+        floatingTexts.push({ x: bestZ.x, y: bestZ.y, text: comboMultiplier.toFixed(1) + 'x COMBO', timer: 50, color: '#ff8800', yOff: -0.3 });
+      }
 
       // Drop loot
       if (!bestZ.isBoss) {
         if (Math.random() < 0.35) {
           dropLoot(bestZ.x, bestZ.y);
         }
-        // Health drop chance
         if (Math.random() < 0.4) {
           lootItems.push({ x: bestZ.x, y: bestZ.y, type: 'health', bobPhase: Math.random()*6 });
         }
       } else {
-        // Boss drops guaranteed upgrade
         dropBossLoot(bestZ.x, bestZ.y);
       }
 
-      // Check if all non-boss zombies are dead
       checkAllDead();
     }
   }
@@ -864,6 +1033,14 @@ function checkAllDead() {
   }
 }
 
+function gearDetail(type) {
+  var info = LOOT_INFO[type];
+  if (info.slot === 'armor') return '-' + Math.floor(info.dmgReduce * 100) + '% damage taken';
+  if (info.slot === 'shield') return 'Block absorbs ' + Math.floor(info.blockPct * 100) + '%';
+  if (info.slot === 'weapon') return info.dmg + ' dmg, range ' + info.range;
+  return '';
+}
+
 function pickupLoot(p) {
   for (var i = lootItems.length - 1; i >= 0; i--) {
     var l = lootItems[i];
@@ -878,6 +1055,7 @@ function pickupLoot(p) {
           score += 50;
           playLootPickup();
           lootItems.splice(i, 1);
+          notifications.push({ text: info.name, detail: gearDetail(l.type), timer: 90, color: info.color });
         }
       } else if (info.slot === 'shield') {
         if (!p.shield || LOOT_INFO[p.shield].tier < info.tier) {
@@ -885,6 +1063,7 @@ function pickupLoot(p) {
           score += 50;
           playLootPickup();
           lootItems.splice(i, 1);
+          notifications.push({ text: info.name, detail: gearDetail(l.type), timer: 90, color: info.color });
         }
       } else if (info.slot === 'weapon') {
         if (!p.weapon || LOOT_INFO[p.weapon].tier < info.tier) {
@@ -892,11 +1071,13 @@ function pickupLoot(p) {
           score += 50;
           playLootPickup();
           lootItems.splice(i, 1);
+          notifications.push({ text: info.name, detail: gearDetail(l.type), timer: 90, color: info.color });
         }
       } else if (info.slot === 'consumable') {
         p.hp = Math.min(p.maxHP, p.hp + info.heal);
         playLootPickup();
         lootItems.splice(i, 1);
+        notifications.push({ text: '+' + info.heal + ' HP', detail: '', timer: 60, color: '#44cc44' });
       }
     }
   }
@@ -972,6 +1153,10 @@ function updateZombie(z) {
         if (z.isBoss) noDamageBoss = false;
         playPlayerHit();
         shakeTimer = 8; shakeIntensity = 5;
+        // Damage direction indicator
+        damageIndicators.push({ angle: Math.atan2(z.y - nearest.y, z.x - nearest.x), timer: 20, playerId: nearest.id });
+        // Cryo slow
+        if (z.type === 'cryo') nearest.slowTimer = 60;
       }
 
       if (nearest.hp <= 0) {
@@ -991,6 +1176,11 @@ function updateZombie(z) {
       var mx = (dx/d) * z.speed * 0.02;
       var my = (dy/d) * z.speed * 0.02;
 
+      // Lava fire trail
+      if (z.type === 'lava' && frameCount % 8 === 0) {
+        fireTrails.push({ x: z.x, y: z.y, timer: 180 });
+      }
+
       // Clown zigzag
       if (z.type === 'clown') {
         var zigzag = Math.sin(frameCount * 0.1) * 0.01;
@@ -1005,6 +1195,14 @@ function updateZombie(z) {
       if (!isWall(z.x, z.y + my + margin * (my > 0 ? 1 : -1))) z.y += my;
       else if (!isWall(z.x + mx, z.y)) z.x += mx; // Slide
     }
+  }
+
+  // Boss intro moment (non-blocking banner + shake)
+  if (z.isBoss && !bossIntroPlayed && detected && z.state !== 'dead') {
+    bossIntroPlayed = true;
+    bossIntroTimer = 90;
+    shakeTimer = 30; shakeIntensity = 6;
+    playBossRoar();
   }
 
   // Boss special attacks
@@ -1067,6 +1265,7 @@ function updateProjectiles() {
           pl.damageFlash = 10;
           noDamageBoss = false;
           playPlayerHit();
+          damageIndicators.push({ angle: Math.atan2(p.y - pl.y, p.x - pl.x), timer: 20, playerId: pl.id });
         }
         if (pl.hp <= 0) { pl.hp = 0; pl.alive = false; checkGameOver(); }
         projectiles.splice(i, 1);
@@ -1097,13 +1296,44 @@ function nextWorld() {
     showGameOver();
     return;
   }
+  // Health regen between worlds
+  for (var i = 0; i < players.length; i++) {
+    if (players[i].alive) {
+      players[i].hp = players[i].maxHP;
+      players[i].slowTimer = 0;
+      players[i].stamina = players[i].maxStamina;
+    }
+  }
   currentWorld++;
   loadWorld(currentWorld);
   state = 'worldintro';
   showWorldIntro();
 }
 
+// Fire trail update
+function updateFireTrails() {
+  for (var i = fireTrails.length - 1; i >= 0; i--) {
+    fireTrails[i].timer--;
+    if (fireTrails[i].timer <= 0) { fireTrails.splice(i, 1); continue; }
+    for (var j = 0; j < players.length; j++) {
+      var pl = players[j];
+      if (!pl.alive) continue;
+      var dx = pl.x - fireTrails[i].x, dy = pl.y - fireTrails[i].y;
+      if (dx*dx + dy*dy < 0.3 && frameCount % 15 === 0) {
+        var fdmg = 3;
+        if (pl.armor) fdmg = Math.floor(fdmg * (1 - LOOT_INFO[pl.armor].dmgReduce));
+        if (fdmg > 0) {
+          pl.hp -= fdmg;
+          pl.damageFlash = 5;
+          if (pl.hp <= 0) { pl.hp = 0; pl.alive = false; checkGameOver(); }
+        }
+      }
+    }
+  }
+}
+
 function showGameOver() {
+  if (document.pointerLockElement) document.exitPointerLock();
   document.getElementById('goScore').textContent = score;
   document.getElementById('goWorld').textContent = (currentWorld + 1);
   document.getElementById('titlePanel').style.display = 'none';
@@ -1192,8 +1422,9 @@ function castRays(p, startCol, endCol, totalCols, zBuffer) {
     zBuffer[localX] = perpDist;
 
     var lineHeight = Math.floor(CH / perpDist);
-    var drawStart = Math.floor(-lineHeight / 2 + CH / 2);
-    var drawEnd = Math.floor(lineHeight / 2 + CH / 2);
+    var horizon = Math.floor(CH / 2 + p.pitch);
+    var drawStart = Math.floor(-lineHeight / 2 + horizon);
+    var drawEnd = Math.floor(lineHeight / 2 + horizon);
     if (drawStart < 0) drawStart = 0;
     if (drawEnd >= CH) drawEnd = CH - 1;
 
@@ -1445,6 +1676,18 @@ function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
     });
   }
 
+  // Fire trails
+  for (var i = 0; i < fireTrails.length; i++) {
+    var ft = fireTrails[i];
+    var dx = ft.x - p.x, dy = ft.y - p.y;
+    sprites.push({
+      x: ft.x, y: ft.y,
+      type: 'fire',
+      ref: ft,
+      dist: Math.sqrt(dx*dx + dy*dy)
+    });
+  }
+
   // Sort back to front
   sprites.sort(function(a, b) { return b.dist - a.dist; });
 
@@ -1474,14 +1717,14 @@ function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
     if (s.type === 'zombie') {
       var wRatio = s.ref.isBoss ? 0.55 : (ZOMBIE_WIDTH[s.ref.type] || 0.35);
       spriteWidth = Math.floor(spriteHeight * wRatio);
-    } else if (s.type === 'loot' || s.type === 'projectile') {
+    } else if (s.type === 'loot' || s.type === 'projectile' || s.type === 'fire') {
       spriteHeight = Math.floor(spriteHeight * 0.4);
       spriteWidth = Math.floor(spriteHeight * 0.8);
     } else {
       spriteWidth = spriteHeight;
     }
 
-    var drawStartY = Math.floor(-spriteHeight / 2 + CH / 2);
+    var drawStartY = Math.floor(-spriteHeight / 2 + CH / 2 + p.pitch);
     var drawStartX = Math.floor(-spriteWidth / 2 + spriteScreenX);
 
     // Brightness based on distance
@@ -1491,6 +1734,17 @@ function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
     if (s.type === 'zombie') {
       // Draw zombie with shaped body (head, torso, arms, legs)
       var deadBright = s.ref.state === 'dead' ? bright * 0.4 : bright;
+      var deadFade = 1;
+      if (s.ref.state === 'dead') {
+        deadFade = Math.max(0.05, s.ref.deadTimer / 60);
+        deadBright = bright * (0.1 + deadFade * 0.35);
+        var origH = spriteHeight;
+        spriteHeight = Math.floor(spriteHeight * (0.15 + deadFade * 0.85));
+        drawStartY += origH - spriteHeight; // collapse downward
+        spriteWidth = Math.floor(spriteWidth * (0.6 + deadFade * 0.4));
+        drawStartX = Math.floor(-spriteWidth / 2 + spriteScreenX);
+        ctx.globalAlpha = deadFade;
+      }
       var zCol = s.ref.staggerTimer > 0 ? '#fff' : s.ref.color;
       var headH = Math.floor(spriteHeight * 0.2);
       var torsoH = Math.floor(spriteHeight * 0.4);
@@ -1619,6 +1873,7 @@ function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
           }
         }
       }
+      if (s.ref.state === 'dead') ctx.globalAlpha = 1;
 
     } else {
       // Non-zombie sprites: draw as shaped icons
@@ -1642,7 +1897,18 @@ function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
       ctx.rect(startCol, 0, endCol - startCol, CH);
       ctx.clip();
 
-      if (s.type === 'projectile') {
+      if (s.type === 'fire') {
+        // Fire trail glow
+        var fAlpha = Math.min(1, s.ref.timer / 60);
+        ctx.fillStyle = 'rgba(255,100,0,' + (0.5 * fAlpha * bright) + ')';
+        ctx.beginPath();
+        ctx.arc(cx, cy, sz * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,200,50,' + (0.3 * fAlpha * bright) + ')';
+        ctx.beginPath();
+        ctx.arc(cx, cy, sz * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (s.type === 'projectile') {
         // Glowing orb
         ctx.fillStyle = s.ref.color;
         ctx.shadowColor = s.ref.color;
@@ -1979,6 +2245,214 @@ function drawDamageFlash(p, left, width) {
   }
 }
 
+// ========== DAMAGE DIRECTION INDICATORS ==========
+function drawDamageIndicators(p, left, width) {
+  var cx = left + width / 2;
+  var cy = CH / 2;
+  for (var i = 0; i < damageIndicators.length; i++) {
+    var d = damageIndicators[i];
+    if (d.playerId !== p.id) continue;
+    // Convert world-space angle to screen-space relative to player facing
+    var relAngle = d.angle - Math.atan2(p.dirY, p.dirX);
+    var alpha = d.timer / 20;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(relAngle);
+    // Red wedge at edge of viewport
+    ctx.fillStyle = 'rgba(255,0,0,' + (0.6 * alpha) + ')';
+    ctx.beginPath();
+    ctx.moveTo(0, -CH * 0.45);
+    ctx.lineTo(-25, -CH * 0.35);
+    ctx.lineTo(25, -CH * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ========== FLOATING TEXTS ==========
+function drawFloatingTexts(p, startCol, endCol, totalCols) {
+  var invDet = 1.0 / (p.planeX * p.dirY - p.dirX * p.planeY);
+  for (var i = 0; i < floatingTexts.length; i++) {
+    var ft = floatingTexts[i];
+    var sx = ft.x - p.x, sy = (ft.y + (ft.yOff || 0)) - p.y;
+    var transformX = invDet * (p.dirY * sx - p.dirX * sy);
+    var transformY = invDet * (-p.planeY * sx + p.planeX * sy);
+    if (transformY <= 0.1) continue;
+    var screenX = Math.floor((totalCols / 2) * (1 + transformX / transformY)) + startCol;
+    var rise = (45 - ft.timer) * 1.5;
+    var screenY = CH / 2 - rise;
+    var alpha = ft.timer / 45;
+    if (screenX < startCol || screenX > startCol + totalCols) continue;
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = ft.color;
+    ctx.globalAlpha = alpha;
+    ctx.fillText(ft.text, screenX - ctx.measureText(ft.text).width / 2, screenY);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ========== NOTIFICATIONS BANNER ==========
+function drawNotifications() {
+  if (notifications.length === 0) return;
+  var n = notifications[0]; // Show one at a time
+  var alpha = Math.min(1, n.timer / 20);
+  var fadeIn = Math.min(1, (90 - n.timer) / 10);
+  var a = Math.min(alpha, fadeIn);
+
+  ctx.save();
+  ctx.globalAlpha = a;
+  var textW = ctx.measureText(n.text).width;
+  var detailW = n.detail ? ctx.measureText(n.detail).width : 0;
+  var w = Math.max(textW, detailW) + 40;
+  var h = n.detail ? 42 : 28;
+  var bx = (CW - w) / 2;
+  var by = 50;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(bx, by, w, h);
+  ctx.strokeStyle = n.color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, w, h);
+  ctx.fillStyle = n.color;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(n.text, CW / 2, by + 18);
+  if (n.detail) {
+    ctx.fillStyle = '#ccc';
+    ctx.font = '11px monospace';
+    ctx.fillText(n.detail, CW / 2, by + 34);
+  }
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ========== EXIT DIRECTION ARROW ==========
+function drawExitArrow(p, left, width) {
+  if (!exitActive || !bossDefeated) return;
+  // Find exit cell
+  var map = MAPS[currentWorld];
+  var exitX = 0, exitY = 0;
+  for (var my = 0; my < MAP_SIZE; my++) {
+    for (var mx = 0; mx < MAP_SIZE; mx++) {
+      if (map[my][mx] === 8) { exitX = mx + 0.5; exitY = my + 0.5; }
+    }
+  }
+  var dx = exitX - p.x, dy = exitY - p.y;
+  var dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 1.5) return; // close enough, no arrow needed
+
+  var angle = Math.atan2(dy, dx) - Math.atan2(p.dirY, p.dirX);
+  var cx = left + width / 2;
+  var cy = CH * 0.15;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.fillStyle = 'rgba(0,255,200,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(18, 0);
+  ctx.lineTo(-8, -10);
+  ctx.lineTo(-4, 0);
+  ctx.lineTo(-8, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // "EXIT" label
+  ctx.fillStyle = 'rgba(0,255,200,0.5)';
+  ctx.font = '10px monospace';
+  ctx.fillText('EXIT', cx - 12, cy + 20);
+}
+
+// ========== SPRINT BAR ==========
+function drawSprintBar(p, left, width) {
+  if (numPlayers > 1) return; // sprint is 1P only
+  if (p.stamina >= p.maxStamina) return;
+  var barW = 60, barH = 5;
+  var bx = left + 8, by = CH - 55;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(bx, by, barW, barH);
+  var pct = p.stamina / p.maxStamina;
+  ctx.fillStyle = pct > 0.3 ? '#4488ff' : '#ff4444';
+  ctx.fillRect(bx, by, barW * pct, barH);
+}
+
+// ========== COMBO METER ==========
+function drawComboMeter(left, width) {
+  if (comboMultiplier <= 1) return;
+  var cx = left + width / 2;
+  var alpha = Math.min(1, comboTimer / 30);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ff8800';
+  ctx.font = 'bold 18px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(comboMultiplier.toFixed(1) + 'x', cx, 55);
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = '10px monospace';
+  ctx.fillText('COMBO', cx, 67);
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ========== BOSS INTRO ==========
+function drawBossIntro() {
+  if (bossIntroTimer <= 0) return;
+  var world = WORLDS[currentWorld];
+  var t = (90 - bossIntroTimer) / 90; // 0 -> 1 over lifetime
+  // Fall: starts above screen, lands at centre, then fades
+  var fallY;
+  if (t < 0.3) {
+    // Drop in with ease-out bounce
+    var ft = t / 0.3;
+    fallY = -40 + (CH / 2 + 10) * (1 - (1 - ft) * (1 - ft));
+  } else {
+    fallY = CH / 2 + 10;
+  }
+  // Fade out in last 30%
+  var alpha = t > 0.7 ? (1 - (t - 0.7) / 0.3) : 1;
+  // Fade in first 10%
+  if (t < 0.1) alpha = t / 0.1;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center';
+  // Name - big, red, with shadow
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 32px monospace';
+  ctx.fillText(world.bossName.toUpperCase(), CW / 2 + 2, fallY + 2);
+  ctx.fillStyle = '#ff3333';
+  ctx.fillText(world.bossName.toUpperCase(), CW / 2, fallY);
+  // Subtitle
+  if (t > 0.2) {
+    var subAlpha = Math.min(1, (t - 0.2) / 0.15) * alpha;
+    ctx.globalAlpha = subAlpha;
+    ctx.fillStyle = '#cc8888';
+    ctx.font = '14px monospace';
+    ctx.fillText('has appeared!', CW / 2, fallY + 24);
+  }
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ========== CRYO SLOW INDICATOR ==========
+function drawSlowIndicator(p, left, width) {
+  if (p.slowTimer <= 0) return;
+  ctx.fillStyle = 'rgba(100,180,255,' + (0.1 + Math.sin(frameCount * 0.1) * 0.05) + ')';
+  ctx.fillRect(left, 0, width, CH);
+  // Ice crystals on edges
+  ctx.fillStyle = 'rgba(150,220,255,0.3)';
+  ctx.fillRect(left, 0, 3, CH);
+  ctx.fillRect(left + width - 3, 0, 3, CH);
+  ctx.fillStyle = '#88ccff';
+  ctx.font = '10px monospace';
+  ctx.fillText('FROZEN', left + width / 2 - 20, CH - 58);
+}
+
 // ========== MAIN LOOP ==========
 function gameLoop() {
   requestAnimationFrame(gameLoop);
@@ -2006,6 +2480,9 @@ function gameLoop() {
 
   if (state !== 'playing') return;
 
+  // Boss intro timer (non-blocking)
+  if (bossIntroTimer > 0) bossIntroTimer--;
+
   // Update
   for (var i = 0; i < players.length; i++) {
     updatePlayer(players[i]);
@@ -2015,6 +2492,31 @@ function gameLoop() {
     updateZombie(zombies[i]);
   }
   updateProjectiles();
+  updateFireTrails();
+
+  // Update floating texts
+  for (var i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].timer--;
+    if (floatingTexts[i].timer <= 0) floatingTexts.splice(i, 1);
+  }
+
+  // Update notifications
+  if (notifications.length > 0) {
+    notifications[0].timer--;
+    if (notifications[0].timer <= 0) notifications.shift();
+  }
+
+  // Update damage indicators
+  for (var i = damageIndicators.length - 1; i >= 0; i--) {
+    damageIndicators[i].timer--;
+    if (damageIndicators[i].timer <= 0) damageIndicators.splice(i, 1);
+  }
+
+  // Combo timer decay
+  if (comboTimer > 0) {
+    comboTimer--;
+    if (comboTimer <= 0) { comboCount = 0; comboMultiplier = 1; }
+  }
 
   // Clean up dead zombies past their timer
   for (var i = zombies.length - 1; i >= 0; i--) {
@@ -2045,7 +2547,13 @@ function gameLoop() {
       castRays(p, 0, CW, CW, zBuffer);
       renderSprites(p, 0, CW, CW, zBuffer);
       drawDamageFlash(p, 0, CW);
+      drawDamageIndicators(p, 0, CW);
+      drawSlowIndicator(p, 0, CW);
       drawHUD(p, 0, CW);
+      drawSprintBar(p, 0, CW);
+      drawExitArrow(p, 0, CW);
+      drawFloatingTexts(p, 0, CW, CW);
+      drawComboMeter(0, CW);
     }
   } else {
     // 2P split screen
@@ -2061,7 +2569,12 @@ function gameLoop() {
       castRays(players[0], 0, Math.floor(halfW), Math.floor(halfW), zBuf1);
       renderSprites(players[0], 0, Math.floor(halfW), Math.floor(halfW), zBuf1);
       drawDamageFlash(players[0], 0, Math.floor(halfW));
+      drawDamageIndicators(players[0], 0, Math.floor(halfW));
+      drawSlowIndicator(players[0], 0, Math.floor(halfW));
       drawHUD(players[0], 0, Math.floor(halfW));
+      drawExitArrow(players[0], 0, Math.floor(halfW));
+      drawFloatingTexts(players[0], 0, Math.floor(halfW), Math.floor(halfW));
+      drawComboMeter(0, Math.floor(halfW));
     } else {
       ctx.fillStyle = '#200';
       ctx.fillRect(0, 0, halfW, CH);
@@ -2081,7 +2594,12 @@ function gameLoop() {
       castRays(players[1], Math.floor(halfW), CW, Math.ceil(halfW), zBuf2);
       renderSprites(players[1], Math.floor(halfW), CW, Math.ceil(halfW), zBuf2);
       drawDamageFlash(players[1], Math.floor(halfW), Math.ceil(halfW));
+      drawDamageIndicators(players[1], Math.floor(halfW), Math.ceil(halfW));
+      drawSlowIndicator(players[1], Math.floor(halfW), Math.ceil(halfW));
       drawHUD(players[1], Math.floor(halfW), Math.ceil(halfW));
+      drawExitArrow(players[1], Math.floor(halfW), Math.ceil(halfW));
+      drawFloatingTexts(players[1], Math.floor(halfW), CW, Math.ceil(halfW));
+      drawComboMeter(Math.floor(halfW), Math.ceil(halfW));
     } else {
       ctx.fillStyle = '#200';
       ctx.fillRect(Math.floor(halfW), 0, Math.ceil(halfW), CH);
@@ -2097,6 +2615,10 @@ function gameLoop() {
   }
 
   ctx.restore();
+
+  // Overlays drawn on top of everything (not per-viewport)
+  drawBossIntro();
+  drawNotifications();
 
   // Zombie groan sounds
   if (frameCount % 120 === 0) {

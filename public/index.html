@@ -825,7 +825,7 @@
   <header class="store-header">
     <h1 class="store-name">EZ-AZ</h1>
     <p class="store-tagline">The Family Video Game Store</p>
-    <p class="store-version">20260303.1900 #b65056a</p>
+    <p class="store-version">20260303.2100 #pending</p>
   </header>
 
   <section class="az-section">
@@ -959,16 +959,20 @@
         </div>
       </a>
 
-      <div class="game-box coming-soon">
-        <div class="game-box-art placeholder">
-          <div class="placeholder-text">Coming<br>Soon</div>
+      <a href="/games/corrupted.html" class="game-box">
+        <div class="game-box-art">
+          <canvas id="corruptedCover" width="220" height="280"></canvas>
         </div>
         <div class="game-box-info">
-          <div class="game-box-title">???</div>
-          <div class="game-box-creators">By You?</div>
-          <div class="game-box-desc">This shelf spot is waiting for a game. Could it be yours?</div>
+          <div class="game-box-title">Corrupted</div>
+          <div class="game-box-creators">By Cooper</div>
+          <div class="game-box-desc">
+            First-person zombie fighter. 6 worlds, loot the fallen, defeat the bosses.
+          </div>
+          <span class="game-box-badge">1-2 PLAYERS</span><br>
+          <span class="game-box-scores" data-game="corrupted">High Scores</span>
         </div>
-      </div>
+      </a>
     </div>
   </section>
 
@@ -1669,6 +1673,126 @@
       ctx.lineWidth = 1.5;
       ctx.strokeRect(6, 12, 20, 20);
     })();
+
+    // Draw the Corrupted cover art
+    (function () {
+      var canvas = document.getElementById('corruptedCover');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width;
+      var H = canvas.height;
+
+      // Dark purple corridor background
+      var grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#0a001a');
+      grad.addColorStop(0.5, '#150030');
+      grad.addColorStop(1, '#0a001a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // First-person corridor walls (perspective lines)
+      ctx.strokeStyle = '#3a1858';
+      ctx.lineWidth = 2;
+      // Left wall
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(60, 60);
+      ctx.moveTo(0, H - 60); ctx.lineTo(60, H - 120);
+      ctx.moveTo(0, 40); ctx.lineTo(50, 80);
+      ctx.stroke();
+      // Right wall
+      ctx.beginPath();
+      ctx.moveTo(W, 0); ctx.lineTo(W - 60, 60);
+      ctx.moveTo(W, H - 60); ctx.lineTo(W - 60, H - 120);
+      ctx.moveTo(W, 40); ctx.lineTo(W - 50, 80);
+      ctx.stroke();
+
+      // Corridor walls solid
+      ctx.fillStyle = '#1a0830';
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(60, 50); ctx.lineTo(60, H - 110); ctx.lineTo(0, H - 50);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(W, 0); ctx.lineTo(W - 60, 50); ctx.lineTo(W - 60, H - 110); ctx.lineTo(W, H - 50);
+      ctx.fill();
+
+      // Floor
+      ctx.fillStyle = '#100020';
+      ctx.beginPath();
+      ctx.moveTo(60, H - 110); ctx.lineTo(W - 60, H - 110);
+      ctx.lineTo(W, H - 50); ctx.lineTo(0, H - 50);
+      ctx.fill();
+
+      // Ceiling
+      ctx.fillStyle = '#080010';
+      ctx.beginPath();
+      ctx.moveTo(60, 50); ctx.lineTo(W - 60, 50);
+      ctx.lineTo(W, 0); ctx.lineTo(0, 0);
+      ctx.fill();
+
+      // Zombie silhouette in corridor
+      var zx = W / 2, zy = 105;
+      // Body
+      ctx.fillStyle = '#2a1040';
+      ctx.fillRect(zx - 12, zy - 30, 24, 40);
+      // Head
+      ctx.beginPath();
+      ctx.arc(zx, zy - 36, 10, 0, Math.PI * 2);
+      ctx.fill();
+      // Arms reaching forward
+      ctx.fillRect(zx - 22, zy - 20, 12, 6);
+      ctx.fillRect(zx + 10, zy - 18, 12, 6);
+      // Glowing red eyes
+      ctx.fillStyle = '#ff0000';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(zx - 4, zy - 38, 2, 0, Math.PI * 2);
+      ctx.arc(zx + 4, zy - 38, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
+      // Sword in foreground (player weapon)
+      ctx.save();
+      ctx.translate(W * 0.7, H - 100);
+      ctx.rotate(-0.3);
+      // Blade
+      ctx.fillStyle = '#aaa';
+      ctx.fillRect(-3, -55, 6, 45);
+      // Crossguard
+      ctx.fillStyle = '#aa8800';
+      ctx.fillRect(-10, -12, 20, 4);
+      // Handle
+      ctx.fillStyle = '#553300';
+      ctx.fillRect(-3, -10, 6, 14);
+      ctx.restore();
+
+      // Purple corruption glow
+      var corruptGrad = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, 130);
+      corruptGrad.addColorStop(0, 'rgba(180, 77, 255, 0.1)');
+      corruptGrad.addColorStop(1, 'rgba(180, 77, 255, 0)');
+      ctx.fillStyle = corruptGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Title text
+      ctx.shadowColor = '#b44dff';
+      ctx.shadowBlur = 12;
+      ctx.font = 'bold 14px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('CORRUPTED', W / 2, H - 28);
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
+      // Rating badge
+      ctx.fillStyle = '#b44dff';
+      ctx.font = 'bold 10px "Press Start 2P", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('E', 12, 26);
+      ctx.strokeStyle = '#b44dff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(6, 12, 20, 20);
+    })();
   </script>
 
   <script>
@@ -1787,7 +1911,8 @@
         'bloom': 'Bloom',
         'cat-vs-mouse': 'Cat vs Mouse',
         'dodgeball': 'Dodgeball',
-        'descent': 'Descent'
+        'descent': 'Descent',
+        'corrupted': 'Corrupted'
       };
 
       var timeGames = { bloom: true, descent: true };

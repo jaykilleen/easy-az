@@ -97,12 +97,11 @@ class AppTest < Minitest::Test
     assert_match(/store-version[^<]*#[0-9a-f]+/, last_response.body)
   end
 
-  # Coming soon placeholders
+  # Corrupted game box on shelf
 
-  def test_index_has_coming_soon_boxes
+  def test_index_has_corrupted_link
     get "/"
-    assert_includes last_response.body, "coming-soon"
-    assert_includes last_response.body, "Coming"
+    assert_includes last_response.body, 'href="/games/corrupted.html"'
   end
 
   # Descent page
@@ -116,6 +115,19 @@ class AppTest < Minitest::Test
     get "/games/descent.html"
     assert_equal "text/html", last_response.content_type
     assert_includes last_response.body, "Descent"
+  end
+
+  # Corrupted page
+
+  def test_corrupted_returns_200
+    get "/games/corrupted.html"
+    assert_equal 200, last_response.status
+  end
+
+  def test_corrupted_serves_html
+    get "/games/corrupted.html"
+    assert_equal "text/html", last_response.content_type
+    assert_includes last_response.body, "Corrupted"
   end
 
   # 404 handling
@@ -317,5 +329,22 @@ class LeaderboardApiTest < Minitest::Test
   def test_get_scores_has_no_cache_header
     get "/api/scores", game: "space-dodge"
     assert_equal "no-store", last_response.headers["cache-control"]
+  end
+
+  def test_get_scores_corrupted_sorted_desc
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["corrupted", "AAA", 1000])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["corrupted", "BBB", 5000])
+    DB.execute("INSERT INTO scores (game, name, value) VALUES (?, ?, ?)", ["corrupted", "CCC", 3000])
+
+    get "/api/scores", game: "corrupted"
+    data = JSON.parse(last_response.body)
+    values = data["scores"].map { |s| s["value"] }
+    assert_equal [5000, 3000, 1000], values
+  end
+
+  def test_post_defaults_name_corrupted
+    post "/api/scores", JSON.generate({ game: "corrupted", name: "", value: 2000 }), { "CONTENT_TYPE" => "application/json" }
+    data = JSON.parse(last_response.body)
+    assert_equal "COOPER", data["scores"][0]["name"]
   end
 end

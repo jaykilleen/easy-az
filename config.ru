@@ -37,8 +37,8 @@ unless defined?(DB)
   end
 end
 
-GAME_SORT ||= { "space-dodge" => "DESC", "bloom" => "ASC", "cat-vs-mouse" => "DESC", "dodgeball" => "DESC", "descent" => "ASC" }.freeze
-DEFAULT_NAMES ||= { "space-dodge" => "C&C", "bloom" => "ANON", "cat-vs-mouse" => "ANON", "dodgeball" => "LACHIE", "descent" => "ANON" }.freeze
+GAME_SORT ||= { "space-dodge" => "DESC", "bloom" => "ASC", "cat-vs-mouse" => "DESC", "dodgeball" => "DESC", "descent" => "ASC", "corrupted" => "DESC" }.freeze
+DEFAULT_NAMES ||= { "space-dodge" => "C&C", "bloom" => "ANON", "cat-vs-mouse" => "ANON", "dodgeball" => "LACHIE", "descent" => "ANON", "corrupted" => "COOPER" }.freeze
 
 def fetch_top_scores(game)
   direction = GAME_SORT[game]

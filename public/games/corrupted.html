@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corrupted - EZ-AZ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',sans-serif;color:#fff}
+.store-banner{position:fixed;top:0;left:0;right:0;height:32px;background:#111;display:flex;align-items:center;justify-content:center;z-index:1000;border-bottom:1px solid #333}
+.store-banner a{color:#00ffc8;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:2px}
+canvas{display:block;margin:32px auto 0;image-rendering:pixelated}
+#overlay{position:fixed;top:32px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;z-index:100}
+.panel{text-align:center;max-width:600px;width:90%;max-height:calc(100vh - 60px);overflow-y:auto;padding:20px}
+.panel h1{font-size:28px;margin-bottom:8px;letter-spacing:2px}
+.panel h2{font-size:18px;margin-bottom:12px;color:#aaa;font-weight:400}
+.panel .subtitle{color:#888;font-size:13px;margin-bottom:20px}
+.btn{display:inline-block;padding:12px 32px;margin:8px;background:#00ffc8;color:#000;border:none;font-size:16px;font-weight:700;cursor:pointer;border-radius:4px;letter-spacing:1px}
+.btn:hover{background:#33ffd6}
+.btn.secondary{background:#333;color:#fff}
+.btn.secondary:hover{background:#555}
+.controls-table{margin:16px auto;font-size:12px;color:#aaa;text-align:left;display:inline-block}
+.controls-table td{padding:2px 12px}
+.controls-table .key{color:#00ffc8;font-weight:700}
+.lb-wrap{margin:16px auto;max-width:320px}
+.lb-row{display:flex;justify-content:space-between;padding:4px 8px;font-size:13px;border-bottom:1px solid #1a1a1a}
+.lb-row.highlight{background:rgba(0,255,200,0.15);color:#00ffc8}
+.lb-row.placeholder{color:#333}
+.lb-empty{color:#555;font-size:13px;padding:12px}
+.lb-title{font-size:14px;color:#888;margin-bottom:8px;letter-spacing:1px}
+input[type="text"]{background:#111;border:1px solid #333;color:#fff;padding:8px 12px;font-size:16px;text-align:center;width:160px;margin:8px;border-radius:4px;text-transform:uppercase}
+.pause-overlay{position:fixed;top:32px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:200;flex-direction:column}
+.pause-overlay h2{font-size:24px;margin-bottom:20px;letter-spacing:4px}
+.player-select{display:flex;gap:20px;margin:16px 0}
+.player-opt{padding:20px 30px;background:#1a1a1a;border:2px solid #333;cursor:pointer;border-radius:8px;text-align:center;transition:border-color 0.2s}
+.player-opt:hover{border-color:#00ffc8}
+.player-opt .num{font-size:32px;font-weight:700;color:#00ffc8}
+.player-opt .label{font-size:12px;color:#888;margin-top:4px}
+.world-intro{position:fixed;top:32px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:none;align-items:center;justify-content:center;z-index:150;flex-direction:column}
+.world-intro h2{font-size:32px;margin-bottom:8px;letter-spacing:3px}
+.world-intro p{color:#888;font-size:16px;margin-bottom:20px}
+.gameover-stats{font-size:14px;color:#aaa;margin:8px 0}
+.gameover-stats span{color:#00ffc8;font-weight:700}
+</style>
+</head>
+<body>
+<div class="store-banner"><a href="/">EZ-AZ</a></div>
+<canvas id="game" width="800" height="500"></canvas>
+
+<div id="overlay">
+  <div class="panel" id="titlePanel">
+    <h1 style="color:#b44dff">CORRUPTED</h1>
+    <h2>A Zombie Fighter by Cooper</h2>
+    <p class="subtitle">Fight through 6 worlds. Start with your fists. Loot the fallen.</p>
+    <div class="player-select">
+      <div class="player-opt" onclick="startGame(1)">
+        <div class="num">1P</div>
+        <div class="label">Solo</div>
+      </div>
+      <div class="player-opt" onclick="startGame(2)">
+        <div class="num">2P</div>
+        <div class="label">Split Screen</div>
+      </div>
+    </div>
+    <table class="controls-table">
+      <tr><td><span class="key">WASD / Arrows</span></td><td>Move</td></tr>
+      <tr><td><span class="key">Shift</span></td><td>Attack</td></tr>
+      <tr><td><span class="key">Space / Q / R-Ctrl</span></td><td>Block</td></tr>
+      <tr><td><span class="key">Escape</span></td><td>Pause</td></tr>
+    </table>
+    <div class="lb-wrap">
+      <div class="lb-title">HIGH SCORES</div>
+      <div id="titleLB"></div>
+    </div>
+  </div>
+  <div class="panel" id="gameoverPanel" style="display:none">
+    <h1 style="color:#b44dff">GAME OVER</h1>
+    <div class="gameover-stats">Score: <span id="goScore">0</span></div>
+    <div class="gameover-stats">World reached: <span id="goWorld">1</span></div>
+    <div id="goQualify" style="display:none">
+      <p style="color:#00ffc8;margin:12px 0">You made the leaderboard!</p>
+      <input type="text" id="goName" maxlength="12" placeholder="YOUR NAME">
+      <br><button class="btn" onclick="submitScore()">Save Score</button>
+    </div>
+    <div id="goLB" class="lb-wrap" style="display:none">
+      <div class="lb-title">HIGH SCORES</div>
+      <div id="goLBBody"></div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn" onclick="restartGame()">Play Again</button>
+      <button class="btn secondary" onclick="window.location.href='/'">Quit</button>
+    </div>
+  </div>
+</div>
+
+<div class="pause-overlay" id="pauseOverlay">
+  <h2>PAUSED</h2>
+  <button class="btn" onclick="resumeGame()">Resume</button>
+  <button class="btn secondary" onclick="window.location.href='/'">Quit</button>
+</div>
+
+<div class="world-intro" id="worldIntro">
+  <h2 id="worldIntroName"></h2>
+  <p id="worldIntroDesc"></p>
+</div>
+
+<script>
+// === CORRUPTED by Cooper ===
+// A first-person raycaster zombie fighter for EZ-AZ
+
+var CW = 800, CH = 500, MAP_SIZE = 24;
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+
+// Resize canvas to fit
+function resizeCanvas() {
+  var maxW = window.innerWidth, maxH = window.innerHeight - 32;
+  var scale = Math.min(maxW / CW, maxH / CH);
+  canvas.style.width = (CW * scale) + 'px';
+  canvas.style.height = (CH * scale) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ========== WORLD DATA ==========
+var WORLDS = [
+  { // World 1: The Sewers
+    name: 'The Sewers', desc: 'Dark tunnels beneath the city. Something lurks below.',
+    wallColors: ['#2a4a2a','#1e3e1e','#345034','#1a3a1a','#2e4e2e','#224422'],
+    ceil: '#0a0a0a', floor: '#1a2a1a',
+    zombieType: 'shambler', bossName: 'Sewer King',
+    zombieCount: 8, bossHP: 200
+  },
+  { // World 2: Abandoned School
+    name: 'Abandoned School', desc: 'Empty hallways echo with shuffling feet.',
+    wallColors: ['#3a4a5a','#2e3e4e','#445466','#384858','#4a5a6a','#334454'],
+    ceil: '#0a0a12', floor: '#1a1a2a',
+    zombieType: 'lurker', bossName: 'Old Chalk',
+    zombieCount: 10, bossHP: 300
+  },
+  { // World 3: Haunted Fairground
+    name: 'Haunted Fairground', desc: 'The carnival never closes. Neither do they.',
+    wallColors: ['#6a2a2a','#884422','#6a4a1a','#7a3030','#884400','#6a3a2a'],
+    ceil: '#0a0808', floor: '#2a1a0a',
+    zombieType: 'clown', bossName: 'The Ringmaster',
+    zombieCount: 12, bossHP: 400
+  },
+  { // World 4: Frozen Lab
+    name: 'Frozen Lab', desc: 'Sub-zero temperatures. The cold preserves everything.',
+    wallColors: ['#4a6a8a','#5a7a9a','#6a8aaa','#3a5a7a','#5080a0','#4a6888'],
+    ceil: '#0a0a1a', floor: '#1a2a3a',
+    zombieType: 'cryo', bossName: 'Dr Frost',
+    zombieCount: 10, bossHP: 500
+  },
+  { // World 5: Volcano Depths
+    name: 'Volcano Depths', desc: 'Molten rock flows beneath your feet.',
+    wallColors: ['#6a2200','#883300','#aa4400','#552200','#773300','#664400'],
+    ceil: '#1a0800', floor: '#331a00',
+    zombieType: 'lava', bossName: 'Molten Golem',
+    zombieCount: 12, bossHP: 600
+  },
+  { // World 6: The Corruption Core
+    name: 'The Corruption Core', desc: 'The source of all corruption. End this.',
+    wallColors: ['#4a1a5a','#3a1048','#5a2068','#2a0838','#4a1858','#381050'],
+    ceil: '#08001a', floor: '#1a0030',
+    zombieType: 'shadow', bossName: 'The Corrupted One',
+    zombieCount: 14, bossHP: 800
+  }
+];
+
+// ZOMBIE TYPE STATS: hp, speed, damage, detection, special
+var ZOMBIE_TYPES = {
+  shambler: { hp: 25, speed: 0.5, dmg: 5, detect: 5, color: '#4a6a3a', name: 'Sewer Shambler' },
+  lurker:   { hp: 35, speed: 0.8, dmg: 7, detect: 6, color: '#5a6a7a', name: 'Hallway Lurker' },
+  clown:    { hp: 30, speed: 1.2, dmg: 9, detect: 8, color: '#aa4444', name: 'Clown Zombie' },
+  cryo:     { hp: 50, speed: 0.5, dmg: 10, detect: 6, color: '#6a9abb', name: 'Cryo Zombie' },
+  lava:     { hp: 40, speed: 1.0, dmg: 12, detect: 7, color: '#cc6622', name: 'Lava Walker' },
+  shadow:   { hp: 45, speed: 0.9, dmg: 14, detect: 5, color: '#5a3a6a', name: 'Shadow Zombie' }
+};
+
+// BOSS STATS
+var BOSS_COLORS = ['#5a8a3a','#4466aa','#cc4444','#44aacc','#ee6600','#9944cc'];
+
+// LOOT TABLES per world pair
+var LOOT_TABLES = [
+  ['leather_armor','wooden_shield','rusty_sword'],    // W1
+  ['leather_armor','wooden_shield','rusty_sword'],    // W2
+  ['iron_armor','iron_shield','rusty_sword'],  // W3
+  ['iron_armor','iron_shield','rusty_sword'],  // W4
+  ['steel_sword'],                      // W5
+  ['steel_sword']                       // W6
+];
+
+var LOOT_INFO = {
+  leather_armor: { name: 'Leather Armour', color: '#8B6914', dmgReduce: 0.25, slot: 'armor', tier: 1 },
+  iron_armor:    { name: 'Iron Armour', color: '#888', dmgReduce: 0.50, slot: 'armor', tier: 2 },
+  wooden_shield: { name: 'Wooden Shield', color: '#9B7B3A', blockPct: 0.50, slot: 'shield', tier: 1 },
+  iron_shield:   { name: 'Iron Shield', color: '#aaa', blockPct: 1.00, slot: 'shield', tier: 2 },
+  rusty_sword:   { name: 'Rusty Sword', color: '#996633', dmg: 20, range: 2.0, cooldown: 15, slot: 'weapon', tier: 1 },
+  steel_sword:   { name: 'Steel Sword', color: '#ccc', dmg: 30, range: 2.5, cooldown: 12, slot: 'weapon', tier: 2 },
+  health:        { name: 'Health Pack', color: '#44cc44', heal: 40, slot: 'consumable', tier: 0 }
+};
+
+// 24x24 MAPS - 0=empty, 1-6=wall types, 7=door, 8=exit portal, 9=boss trigger zone
+var MAPS = [];
+(function buildMaps() {
+  // Helper to create bordered empty room with corridors
+  function createMap(layout) {
+    var m = [];
+    for (var y = 0; y < MAP_SIZE; y++) {
+      m[y] = [];
+      for (var x = 0; x < MAP_SIZE; x++) {
+        m[y][x] = layout[y][x] || 0;
+      }
+    }
+    return m;
+  }
+
+  // World 1: The Sewers - Simple corridors
+  MAPS[0] = createMap([
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1],
+    [1,0,0,0,0,0,0,1,1,0,0,1,0,0,1,1,0,0,0,0,0,0,0,1],
+    [1,1,1,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,1,1,1,1],
+    [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,0,0,1,1,1,1,1,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+    [1,1,1,1,0,0,1,1,1,0,0,0,0,0,1,1,1,0,0,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,1,1],
+    [1,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+    [1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1],
+    [1,0,0,0,0,1,0,0,1,1,0,0,0,0,1,1,0,0,1,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  ]);
+
+  // World 2: Abandoned School - Classroom layout
+  MAPS[1] = createMap([
+    [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,2,2,0,0,2,2,0,0,0,0,0,2,2,0,0,2,2,0,0,0,2],
+    [2,0,0,2,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,2,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,2,2,0,0,2,2,2,2,0,0,2,2,2,0,0,2,2,2,2,2,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,2,2,0,0,0,0,2,2,2,2,2,0,0,0,0,2,2,0,0,0,2],
+    [2,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,2],
+    [2,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,2,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,2,2,2,0,0,0,2,2,2,2,2,0,0,0,2,2,2,0,0,0,2],
+    [2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,2],
+    [2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],
+    [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+  ]);
+
+  // World 3: Haunted Fairground - Open areas with tent structures
+  MAPS[2] = createMap([
+    [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
+    [3,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,3],
+    [3,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,3,3,0,0,0,3,0,0,0,0,3,0,0,0,3,3,0,0,0,3],
+    [3,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,3,0,0,0,0,0,3,3,3,0,0,0,0,3,3,3,0,0,0,0,0,3,3],
+    [3,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,3],
+    [3,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,3,3,0,0,3,3,3,3,0,0,3,3,0,0,0,0,0,3],
+    [3,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,3],
+    [3,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,3],
+    [3,0,0,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,0,0,3],
+    [3,0,0,0,0,0,0,0,0,3,0,0,0,0,3,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,3],
+    [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+    [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+  ]);
+
+  // World 4: Frozen Lab - Lab rooms with corridors
+  MAPS[3] = createMap([
+    [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+    [4,0,0,0,4,0,0,0,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,4,0,0,0,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,0,4],
+    [4,4,0,0,0,0,4,4,0,0,4,4,0,0,4,4,0,0,4,0,0,0,4,4],
+    [4,0,0,0,0,0,0,4,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,4,4,0,0,0,0,4,4,0,0,4,4,0,0,0,0,4,4,0,0,4],
+    [4,0,0,4,0,0,0,0,0,4,0,0,0,0,4,0,0,0,0,0,4,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,4,4,4,0,0,0,0,0,4,4,4,0,0,0,0,0,0,4],
+    [4,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,4,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,4,0,0,0,0,4,0,0,4,0,0,0,4,0,0,0,0,4,0,0,4],
+    [4,0,0,4,4,0,0,0,4,0,0,0,0,0,0,4,0,0,0,4,4,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,4,4,0,0,4,0,0,4,0,0,4,4,0,0,0,0,0,4],
+    [4,0,0,0,0,0,4,0,0,0,4,0,0,4,0,0,0,4,0,0,0,0,0,4],
+    [4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+  ]);
+
+  // World 5: Volcano Depths - Lava channels and narrow passages
+  MAPS[4] = createMap([
+    [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],
+    [5,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5],
+    [5,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5],
+    [5,0,0,5,0,0,0,0,5,5,5,0,0,5,5,5,0,0,0,0,5,0,0,5],
+    [5,0,0,5,0,0,0,0,0,0,5,0,0,5,0,0,0,0,0,0,5,0,0,5],
+    [5,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,5],
+    [5,5,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,5],
+    [5,0,0,0,5,5,5,0,0,5,0,0,0,0,5,0,0,5,5,5,0,0,0,5],
+    [5,0,0,0,0,0,0,0,0,5,0,0,0,0,5,0,0,0,0,0,0,0,0,5],
+    [5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
+    [5,0,0,5,5,0,0,0,0,0,0,5,5,0,0,0,0,0,0,5,5,0,0,5],
+    [5,0,0,0,5,0,0,0,0,0,0,5,0,0,0,0,0,0,0,5,0,0,0,5],
+    [5,0,0,0,0,0,0,0,5,0,0,0,0,0,0,5,0,0,0,0,0,0,0,5],
+    [5,0,0,0,0,0,5,5,5,0,0,0,0,0,0,5,5,5,0,0,0,0,0,5],
+    [5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5],
+    [5,0,0,0,0,0,0,0,0,0,5,5,5,5,0,0,0,0,0,0,0,0,0,5],
+    [5,0,0,0,5,0,0,0,0,0,5,0,0,5,0,0,0,0,0,5,0,0,0,5],
+    [5,0,0,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,0,0,5],
+    [5,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,5],
+    [5,0,0,0,0,0,0,5,5,0,0,0,0,0,0,5,5,0,0,0,0,0,0,5],
+    [5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
+    [5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,5],
+    [5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
+    [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+  ]);
+
+  // World 6: The Corruption Core - Twisting passages
+  MAPS[5] = createMap([
+    [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],
+    [6,0,0,0,0,0,6,0,0,0,0,6,6,0,0,0,0,6,0,0,0,0,0,6],
+    [6,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,6],
+    [6,0,0,6,0,0,0,0,0,6,0,0,0,0,6,0,0,0,0,0,6,0,0,6],
+    [6,0,0,6,6,0,0,0,0,6,6,0,0,6,6,0,0,0,0,6,6,0,0,6],
+    [6,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,6],
+    [6,6,0,0,0,0,0,6,0,0,0,0,0,0,0,0,6,0,0,0,0,0,6,6],
+    [6,0,0,0,6,6,6,6,0,0,6,0,0,6,0,0,6,6,6,6,0,0,0,6],
+    [6,0,0,0,0,0,0,0,0,0,6,0,0,6,0,0,0,0,0,0,0,0,0,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+    [6,0,0,6,0,0,0,0,6,0,0,0,0,0,0,6,0,0,0,0,6,0,0,6],
+    [6,0,0,6,6,0,0,0,6,0,0,0,0,0,0,6,0,0,0,6,6,0,0,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+    [6,0,0,0,0,0,6,0,0,0,0,6,6,0,0,0,0,6,0,0,0,0,0,6],
+    [6,6,0,0,0,0,6,6,0,0,0,0,0,0,0,0,6,6,0,0,0,0,6,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+    [6,0,0,6,0,0,0,0,0,6,6,0,0,6,6,0,0,0,0,0,6,0,0,6],
+    [6,0,0,6,6,0,0,0,0,0,6,0,0,6,0,0,0,0,0,6,6,0,0,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+    [6,0,0,0,0,0,6,6,0,0,0,0,0,0,0,0,6,6,0,0,0,0,0,6],
+    [6,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,6],
+    [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+    [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+  ]);
+})();
+
+// Zombie spawn positions for each map (y, x)
+var ZOMBIE_SPAWNS = [
+  [[5,3],[5,14],[8,5],[8,16],[11,3],[14,10],[17,5],[17,18]],
+  [[2,5],[2,17],[5,3],[5,18],[9,8],[9,16],[12,5],[12,18],[17,6],[17,17]],
+  [[2,3],[2,19],[5,10],[5,14],[9,5],[9,18],[13,8],[13,16],[16,3],[16,19],[18,10],[18,14]],
+  [[2,2],[2,15],[5,10],[5,18],[8,5],[8,18],[11,3],[11,18],[14,5],[14,18]],
+  [[2,3],[2,14],[5,9],[5,18],[8,5],[8,18],[11,3],[11,16],[14,10],[14,14],[17,6],[17,18]],
+  [[2,3],[2,18],[5,10],[5,14],[8,5],[8,18],[11,3],[11,18],[13,10],[13,14],[16,5],[16,18],[18,8],[18,16]]
+];
+
+// Boss spawn positions (y, x)
+var BOSS_SPAWNS = [[19,12],[19,12],[19,12],[19,12],[19,12],[19,12]];
+
+// ========== GAME STATE ==========
+var state = 'title'; // title, playing, paused, gameover, worldintro
+var numPlayers = 1;
+var currentWorld = 0;
+var score = 0;
+var frameCount = 0;
+var shakeTimer = 0, shakeIntensity = 0;
+
+// Player state
+function createPlayer(id) {
+  return {
+    id: id,
+    x: 1.5, y: 1.5,
+    dirX: 1, dirY: 0,
+    planeX: 0, planeY: 0.66,
+    hp: 150, maxHP: 150,
+    alive: true,
+    armor: null, shield: null, weapon: null,
+    blocking: false,
+    attackCooldown: 0,
+    attackAnim: 0,
+    moveSpeed: 0.04,
+    rotSpeed: 0.025,
+    damageFlash: 0,
+    bobPhase: 0,
+    isMoving: false
+  };
+}
+
+var players = [];
+var zombies = [];
+var lootItems = [];
+var projectiles = [];
+var boss = null;
+var bossDefeated = false;
+var allZombiesDead = false;
+var exitActive = false;
+var worldIntroTimer = 0;
+var noDamageBoss = true;
+var killedCount = 0;
+
+// Input
+var keys = {};
+document.addEventListener('keydown', function(e) {
+  keys[e.code] = true;
+  if (e.code === 'Escape') {
+    if (state === 'playing') { state = 'paused'; document.getElementById('pauseOverlay').style.display = 'flex'; }
+    else if (state === 'paused') resumeGame();
+  }
+  if (state === 'title' || state === 'gameover') return;
+  e.preventDefault();
+});
+document.addEventListener('keyup', function(e) { keys[e.code] = false; });
+
+// ========== AUDIO ==========
+var audioCtx = null;
+var masterGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.3;
+  masterGain.connect(audioCtx.destination);
+}
+
+function playSound(freq, type, duration, vol, detune) {
+  if (!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = type || 'square';
+  osc.frequency.value = freq;
+  if (detune) osc.detune.value = detune;
+  gain.gain.value = (vol || 0.1) * 0.3;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.2));
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime + (duration || 0.2));
+}
+
+function playPunch() { playSound(120, 'sawtooth', 0.12, 0.15); playSound(80, 'square', 0.08, 0.1); }
+function playSwordSwing() { playSound(200, 'sawtooth', 0.15, 0.12); playSound(300, 'triangle', 0.1, 0.08); }
+function playZombieHit() { playSound(90, 'sawtooth', 0.15, 0.1, Math.random()*200-100); }
+function playZombieDeath() { playSound(60, 'sawtooth', 0.3, 0.15); playSound(40, 'square', 0.4, 0.1); }
+function playPlayerHit() { playSound(150, 'square', 0.1, 0.15); playSound(100, 'sawtooth', 0.15, 0.1); }
+function playLootPickup() { playSound(440, 'sine', 0.1, 0.12); setTimeout(function(){playSound(660, 'sine', 0.15, 0.12);}, 80); }
+function playBossRoar() { playSound(50, 'sawtooth', 0.5, 0.2); playSound(70, 'square', 0.4, 0.15); }
+function playBossDeath() {
+  playSound(200, 'sine', 0.2, 0.15);
+  setTimeout(function(){playSound(300, 'sine', 0.2, 0.15);}, 150);
+  setTimeout(function(){playSound(400, 'sine', 0.3, 0.15);}, 300);
+}
+function playBlock() { playSound(800, 'square', 0.05, 0.08); playSound(600, 'triangle', 0.08, 0.06); }
+function playFootstep() { playSound(60 + Math.random()*20, 'square', 0.04, 0.03); }
+
+// Ambient drone
+var ambientOscs = [];
+function startAmbient(worldIdx) {
+  stopAmbient();
+  if (!audioCtx) return;
+  var baseFreqs = [55, 65, 50, 60, 70, 45];
+  var base = baseFreqs[worldIdx] || 55;
+  var types = ['sawtooth','sine','triangle'];
+  for (var i = 0; i < 3; i++) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = types[i];
+    osc.frequency.value = base * (i + 1) * 0.5;
+    gain.gain.value = 0.015;
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+    ambientOscs.push({ osc: osc, gain: gain });
+  }
+}
+function stopAmbient() {
+  ambientOscs.forEach(function(a) { try { a.osc.stop(); } catch(e){} });
+  ambientOscs = [];
+}
+
+// ========== LEADERBOARD ==========
+function fetchLeaderboard(cb) {
+  fetch('/api/scores?game=corrupted')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { cb(d.scores || []); })
+    .catch(function() {
+      var local = JSON.parse(localStorage.getItem('corrupted-scores') || '[]');
+      cb(local);
+    });
+}
+
+function renderLB(scores, container, highlightName) {
+  var html = '';
+  if (!scores || scores.length === 0) {
+    html = '<div class="lb-empty">No scores yet. Be the first!</div>';
+  } else {
+    scores.forEach(function(s, i) {
+      var cls = (highlightName && s.name === highlightName) ? ' highlight' : '';
+      html += '<div class="lb-row' + cls + '"><span>' + (i+1) + '. ' + s.name + '</span><span>' + s.value + ' pts</span></div>';
+    });
+  }
+  for (var i = (scores ? scores.length : 0); i < 10; i++) {
+    html += '<div class="lb-row placeholder"><span>' + (i+1) + '. ---</span><span>-</span></div>';
+  }
+  container.innerHTML = html;
+}
+
+// Load title leaderboard
+fetchLeaderboard(function(scores) {
+  renderLB(scores, document.getElementById('titleLB'));
+});
+
+// ========== GAME INIT ==========
+function startGame(np) {
+  initAudio();
+  numPlayers = np;
+  currentWorld = 0;
+  score = 0;
+  frameCount = 0;
+  players = [];
+  for (var i = 0; i < np; i++) players.push(createPlayer(i));
+  loadWorld(0);
+  document.getElementById('overlay').style.display = 'none';
+  state = 'worldintro';
+  showWorldIntro();
+}
+
+function loadWorld(idx) {
+  currentWorld = idx;
+  var world = WORLDS[idx];
+  zombies = [];
+  lootItems = [];
+  projectiles = [];
+  boss = null;
+  bossDefeated = false;
+  exitActive = false;
+  allZombiesDead = false;
+  noDamageBoss = true;
+  killedCount = 0;
+
+  // Set player spawns
+  players[0].x = 1.5; players[0].y = 1.5;
+  players[0].dirX = 1; players[0].dirY = 0;
+  players[0].planeX = 0; players[0].planeY = 0.66;
+  players[0].alive = true;
+  players[0].damageFlash = 0;
+  if (numPlayers > 1) {
+    players[1].x = 2.5; players[1].y = 1.5;
+    players[1].dirX = 1; players[1].dirY = 0;
+    players[1].planeX = 0; players[1].planeY = 0.66;
+    players[1].alive = true;
+    players[1].damageFlash = 0;
+  }
+
+  // Spawn zombies
+  var spawns = ZOMBIE_SPAWNS[idx];
+  var zt = ZOMBIE_TYPES[world.zombieType];
+  var count = Math.min(world.zombieCount, spawns.length);
+  for (var i = 0; i < count; i++) {
+    var sp = spawns[i];
+    zombies.push({
+      x: sp[1] + 0.5, y: sp[0] + 0.5,
+      hp: zt.hp, maxHP: zt.hp,
+      speed: zt.speed, dmg: zt.dmg,
+      detect: zt.detect, color: zt.color,
+      type: world.zombieType,
+      state: 'idle', // idle, chase, attack, stagger, dead
+      staggerTimer: 0,
+      attackTimer: 0,
+      deadTimer: 0,
+      wanderAngle: Math.random() * Math.PI * 2,
+      wanderTimer: 0,
+      isBoss: false
+    });
+  }
+
+  // Spawn boss
+  var bs = BOSS_SPAWNS[idx];
+  var bossHP = world.bossHP;
+  boss = {
+    x: bs[1] + 0.5, y: bs[0] + 0.5,
+    hp: bossHP, maxHP: bossHP,
+    speed: zt.speed * 0.7,
+    dmg: zt.dmg * 2,
+    detect: 15,
+    color: BOSS_COLORS[idx],
+    type: world.zombieType,
+    state: 'idle',
+    staggerTimer: 0,
+    attackTimer: 0,
+    deadTimer: 0,
+    wanderAngle: 0,
+    wanderTimer: 0,
+    isBoss: true,
+    phase: 1,
+    specialTimer: 0,
+    name: world.bossName
+  };
+  zombies.push(boss);
+
+  startAmbient(idx);
+}
+
+function showWorldIntro() {
+  var world = WORLDS[currentWorld];
+  document.getElementById('worldIntroName').textContent = 'World ' + (currentWorld+1) + ': ' + world.name;
+  document.getElementById('worldIntroDesc').textContent = world.desc;
+  document.getElementById('worldIntro').style.display = 'flex';
+  worldIntroTimer = 120; // 2 seconds
+}
+
+function resumeGame() {
+  state = 'playing';
+  document.getElementById('pauseOverlay').style.display = 'none';
+}
+
+function restartGame() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('titlePanel').style.display = 'block';
+  document.getElementById('gameoverPanel').style.display = 'none';
+  document.getElementById('overlay').style.display = 'flex';
+  state = 'title';
+  stopAmbient();
+}
+
+// ========== MAP HELPERS ==========
+function isWall(x, y) {
+  var mx = Math.floor(x), my = Math.floor(y);
+  if (mx < 0 || mx >= MAP_SIZE || my < 0 || my >= MAP_SIZE) return true;
+  var v = MAPS[currentWorld][my][mx];
+  return v >= 1 && v <= 6;
+}
+
+function isExit(x, y) {
+  var mx = Math.floor(x), my = Math.floor(y);
+  if (mx < 0 || mx >= MAP_SIZE || my < 0 || my >= MAP_SIZE) return false;
+  return MAPS[currentWorld][my][mx] === 8;
+}
+
+// ========== PLAYER UPDATE ==========
+function updatePlayer(p, dt) {
+  if (!p.alive) return;
+
+  var moveF = 0, moveS = 0, rot = 0;
+  p.blocking = false;
+  p.isMoving = false;
+  var doAttack = false;
+
+  if (p.id === 0) {
+    // Player 1: Arrows + Right Shift/Ctrl (or WASD + LShift in 1P)
+    if (keys['ArrowUp'] || (numPlayers === 1 && keys['KeyW'])) moveF = 1;
+    if (keys['ArrowDown'] || (numPlayers === 1 && keys['KeyS'])) moveF = -1;
+    if (keys['ArrowLeft'] || (numPlayers === 1 && keys['KeyA'])) rot = -1;
+    if (keys['ArrowRight'] || (numPlayers === 1 && keys['KeyD'])) rot = 1;
+    if (keys['ShiftRight'] || (numPlayers === 1 && keys['ShiftLeft'])) doAttack = true;
+    if (keys['ControlRight'] || (numPlayers === 1 && keys['Space'])) p.blocking = true;
+  } else {
+    // Player 2: WASD + Left Shift + Q
+    if (keys['KeyW']) moveF = 1;
+    if (keys['KeyS']) moveF = -1;
+    if (keys['KeyA']) rot = -1;
+    if (keys['KeyD']) rot = 1;
+    if (keys['ShiftLeft']) doAttack = true;
+    if (keys['KeyQ']) p.blocking = true;
+  }
+
+  // Block slows movement
+  var spd = p.blocking ? p.moveSpeed * 0.5 : p.moveSpeed;
+
+  // Rotation
+  if (rot !== 0) {
+    var rs = p.rotSpeed * rot;
+    var oldDX = p.dirX, oldPX = p.planeX;
+    p.dirX = p.dirX * Math.cos(rs) - p.dirY * Math.sin(rs);
+    p.dirY = oldDX * Math.sin(rs) + p.dirY * Math.cos(rs);
+    p.planeX = p.planeX * Math.cos(rs) - p.planeY * Math.sin(rs);
+    p.planeY = oldPX * Math.sin(rs) + p.planeY * Math.cos(rs);
+  }
+
+  // Movement with wall collision
+  if (moveF !== 0) {
+    p.isMoving = true;
+    var nx = p.x + p.dirX * spd * moveF;
+    var ny = p.y + p.dirY * spd * moveF;
+    var margin = 0.2;
+    if (!isWall(nx + margin * (nx > p.x ? 1 : -1), p.y)) p.x = nx;
+    if (!isWall(p.x, ny + margin * (ny > p.y ? 1 : -1))) p.y = ny;
+
+    // Check exit
+    if (exitActive && isExit(p.x, p.y)) {
+      nextWorld();
+      return;
+    }
+  }
+
+  // Walking bob
+  if (p.isMoving) {
+    p.bobPhase += 0.15;
+    if (frameCount % 12 === 0) playFootstep();
+  }
+
+  // Attack
+  if (p.attackCooldown > 0) p.attackCooldown--;
+  if (doAttack && p.attackCooldown <= 0) {
+    performAttack(p);
+  }
+
+  // Attack animation decay
+  if (p.attackAnim > 0) p.attackAnim--;
+
+  // Damage flash decay
+  if (p.damageFlash > 0) p.damageFlash--;
+}
+
+function performAttack(p) {
+  var range = 2.0, dmg = 10, cooldown = 18;
+  if (p.weapon) {
+    var w = LOOT_INFO[p.weapon];
+    range = w.range;
+    dmg = w.dmg;
+    cooldown = w.cooldown;
+  }
+  p.attackCooldown = cooldown;
+  p.attackAnim = 10;
+
+  if (p.weapon) playSwordSwing();
+  else playPunch();
+
+  // Find closest zombie in cone
+  var bestDist = range + 0.1;
+  var bestZ = null;
+  var coneCos = Math.cos(Math.PI / 6); // 30 degrees half angle = 60 degree cone
+
+  for (var i = 0; i < zombies.length; i++) {
+    var z = zombies[i];
+    if (z.state === 'dead') continue;
+    var dx = z.x - p.x, dy = z.y - p.y;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > range) continue;
+    if (dist < 0.01) continue;
+    // Check angle
+    var ndx = dx/dist, ndy = dy/dist;
+    var dot = ndx * p.dirX + ndy * p.dirY;
+    if (dot < coneCos) continue;
+    if (dist < bestDist) { bestDist = dist; bestZ = z; }
+  }
+
+  if (bestZ) {
+    bestZ.hp -= dmg;
+    bestZ.staggerTimer = 10;
+    bestZ.state = 'stagger';
+    playZombieHit();
+    shakeTimer = 5; shakeIntensity = 3;
+
+    if (bestZ.hp <= 0) {
+      bestZ.state = 'dead';
+      bestZ.deadTimer = 60;
+      playZombieDeath();
+      killedCount++;
+
+      // Score
+      var baseScore = 100 + currentWorld * 50;
+      if (bestZ.isBoss) {
+        baseScore = 1000 + (currentWorld + 1) * 500;
+        if (noDamageBoss) baseScore += 1000;
+        bossDefeated = true;
+        exitActive = true;
+        playBossDeath();
+      }
+      score += baseScore;
+
+      // Drop loot
+      if (!bestZ.isBoss) {
+        if (Math.random() < 0.35) {
+          dropLoot(bestZ.x, bestZ.y);
+        }
+        // Health drop chance
+        if (Math.random() < 0.4) {
+          lootItems.push({ x: bestZ.x, y: bestZ.y, type: 'health', bobPhase: Math.random()*6 });
+        }
+      } else {
+        // Boss drops guaranteed upgrade
+        dropBossLoot(bestZ.x, bestZ.y);
+      }
+
+      // Check if all non-boss zombies are dead
+      checkAllDead();
+    }
+  }
+}
+
+function dropLoot(x, y) {
+  var table = LOOT_TABLES[currentWorld];
+  if (!table || table.length === 0) return;
+  var type = table[Math.floor(Math.random() * table.length)];
+  lootItems.push({ x: x, y: y, type: type, bobPhase: Math.random()*6 });
+}
+
+function dropBossLoot(x, y) {
+  // Drop next tier items
+  var nextWorld = currentWorld + 1;
+  if (nextWorld >= 6) nextWorld = 5;
+  var table = LOOT_TABLES[nextWorld];
+  // Drop all items from next tier
+  for (var i = 0; i < table.length; i++) {
+    lootItems.push({
+      x: x + (Math.random()-0.5)*0.5,
+      y: y + (Math.random()-0.5)*0.5,
+      type: table[i],
+      bobPhase: Math.random()*6
+    });
+  }
+}
+
+function checkAllDead() {
+  var alive = 0;
+  for (var i = 0; i < zombies.length; i++) {
+    if (zombies[i].state !== 'dead' && !zombies[i].isBoss) alive++;
+  }
+  if (alive === 0 && !allZombiesDead) {
+    allZombiesDead = true;
+    score += 500; // Full clear bonus
+  }
+}
+
+function pickupLoot(p) {
+  for (var i = lootItems.length - 1; i >= 0; i--) {
+    var l = lootItems[i];
+    var dx = l.x - p.x, dy = l.y - p.y;
+    if (dx*dx + dy*dy < 0.5) {
+      var info = LOOT_INFO[l.type];
+      if (!info) continue;
+
+      if (info.slot === 'armor') {
+        if (!p.armor || LOOT_INFO[p.armor].tier < info.tier) {
+          p.armor = l.type;
+          score += 50;
+          playLootPickup();
+          lootItems.splice(i, 1);
+        }
+      } else if (info.slot === 'shield') {
+        if (!p.shield || LOOT_INFO[p.shield].tier < info.tier) {
+          p.shield = l.type;
+          score += 50;
+          playLootPickup();
+          lootItems.splice(i, 1);
+        }
+      } else if (info.slot === 'weapon') {
+        if (!p.weapon || LOOT_INFO[p.weapon].tier < info.tier) {
+          p.weapon = l.type;
+          score += 50;
+          playLootPickup();
+          lootItems.splice(i, 1);
+        }
+      } else if (info.slot === 'consumable') {
+        p.hp = Math.min(p.maxHP, p.hp + info.heal);
+        playLootPickup();
+        lootItems.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ========== ZOMBIE AI ==========
+function updateZombie(z) {
+  if (z.state === 'dead') {
+    z.deadTimer--;
+    return;
+  }
+
+  if (z.staggerTimer > 0) {
+    z.staggerTimer--;
+    if (z.staggerTimer <= 0) z.state = 'idle';
+    return;
+  }
+
+  // Find nearest alive player
+  var nearest = null, nearDist = 999;
+  for (var i = 0; i < players.length; i++) {
+    if (!players[i].alive) continue;
+    var dx = players[i].x - z.x, dy = players[i].y - z.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < nearDist) { nearDist = d; nearest = players[i]; }
+  }
+
+  if (!nearest) { z.state = 'idle'; return; }
+
+  // Shadow zombie invisibility handled in rendering
+  var detected = nearDist < z.detect;
+
+  if (!detected) {
+    // Wander
+    z.state = 'idle';
+    z.wanderTimer--;
+    if (z.wanderTimer <= 0) {
+      z.wanderAngle = Math.random() * Math.PI * 2;
+      z.wanderTimer = 60 + Math.floor(Math.random() * 60);
+    }
+    var wx = Math.cos(z.wanderAngle) * z.speed * 0.005;
+    var wy = Math.sin(z.wanderAngle) * z.speed * 0.005;
+    if (!isWall(z.x + wx, z.y)) z.x += wx;
+    if (!isWall(z.x, z.y + wy)) z.y += wy;
+    return;
+  }
+
+  // Chase or attack
+  var attackRange = z.isBoss ? 2.0 : 1.2;
+  if (nearDist < attackRange) {
+    z.state = 'attack';
+    z.attackTimer--;
+    if (z.attackTimer <= 0) {
+      // Attack player
+      var dmg = z.dmg;
+      // Apply armor
+      if (nearest.armor) {
+        dmg *= (1 - LOOT_INFO[nearest.armor].dmgReduce);
+      }
+      // Apply shield if blocking
+      if (nearest.blocking && nearest.shield) {
+        dmg *= (1 - LOOT_INFO[nearest.shield].blockPct);
+        playBlock();
+      } else if (nearest.blocking) {
+        dmg *= 0.75; // Bare hands block
+        playBlock();
+      }
+
+      dmg = Math.floor(dmg);
+      if (dmg > 0) {
+        nearest.hp -= dmg;
+        nearest.damageFlash = 10;
+        if (z.isBoss) noDamageBoss = false;
+        playPlayerHit();
+        shakeTimer = 8; shakeIntensity = 5;
+      }
+
+      if (nearest.hp <= 0) {
+        nearest.hp = 0;
+        nearest.alive = false;
+        checkGameOver();
+      }
+
+      z.attackTimer = z.isBoss ? 60 : 50;
+    }
+  } else {
+    z.state = 'chase';
+    // Move toward player, slide along walls
+    var dx = nearest.x - z.x, dy = nearest.y - z.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d > 0.01) {
+      var mx = (dx/d) * z.speed * 0.02;
+      var my = (dy/d) * z.speed * 0.02;
+
+      // Clown zigzag
+      if (z.type === 'clown') {
+        var zigzag = Math.sin(frameCount * 0.1) * 0.01;
+        mx += -my/d * zigzag * 50;
+        my += mx/d * zigzag * 50;
+      }
+
+      var margin = 0.3;
+      if (!isWall(z.x + mx + margin * (mx > 0 ? 1 : -1), z.y)) z.x += mx;
+      else if (!isWall(z.x, z.y + my)) z.y += my; // Slide
+
+      if (!isWall(z.x, z.y + my + margin * (my > 0 ? 1 : -1))) z.y += my;
+      else if (!isWall(z.x + mx, z.y)) z.x += mx; // Slide
+    }
+  }
+
+  // Boss special attacks
+  if (z.isBoss) {
+    z.specialTimer--;
+    if (z.specialTimer <= 0) {
+      bossSpecialAttack(z, nearest);
+      z.specialTimer = 90 + Math.floor(Math.random() * 60);
+    }
+    // Phase 2 at half health
+    if (z.hp < z.maxHP * 0.5 && z.phase === 1) {
+      z.phase = 2;
+      z.speed *= 1.3;
+      z.dmg = Math.floor(z.dmg * 1.5);
+      playBossRoar();
+    }
+  }
+}
+
+function bossSpecialAttack(b, target) {
+  // Shoot projectile
+  var dx = target.x - b.x, dy = target.y - b.y;
+  var d = Math.sqrt(dx*dx + dy*dy);
+  if (d < 0.01) return;
+  projectiles.push({
+    x: b.x, y: b.y,
+    vx: (dx/d) * 0.06,
+    vy: (dy/d) * 0.06,
+    dmg: Math.floor(b.dmg * 0.6),
+    life: 120,
+    color: BOSS_COLORS[currentWorld]
+  });
+}
+
+function updateProjectiles() {
+  for (var i = projectiles.length - 1; i >= 0; i--) {
+    var p = projectiles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    if (p.life <= 0 || isWall(p.x, p.y)) {
+      projectiles.splice(i, 1);
+      continue;
+    }
+    // Hit players
+    for (var j = 0; j < players.length; j++) {
+      var pl = players[j];
+      if (!pl.alive) continue;
+      var dx = pl.x - p.x, dy = pl.y - p.y;
+      if (dx*dx + dy*dy < 0.4) {
+        var dmg = p.dmg;
+        if (pl.armor) dmg *= (1 - LOOT_INFO[pl.armor].dmgReduce);
+        if (pl.blocking && pl.shield) {
+          dmg *= (1 - LOOT_INFO[pl.shield].blockPct);
+          playBlock();
+        }
+        dmg = Math.floor(dmg);
+        if (dmg > 0) {
+          pl.hp -= dmg;
+          pl.damageFlash = 10;
+          noDamageBoss = false;
+          playPlayerHit();
+        }
+        if (pl.hp <= 0) { pl.hp = 0; pl.alive = false; checkGameOver(); }
+        projectiles.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
+function checkGameOver() {
+  var anyAlive = false;
+  for (var i = 0; i < players.length; i++) {
+    if (players[i].alive) anyAlive = true;
+  }
+  if (!anyAlive) {
+    state = 'gameover';
+    stopAmbient();
+    showGameOver();
+  }
+}
+
+function nextWorld() {
+  if (currentWorld >= 5) {
+    // Victory!
+    score += 5000; // Victory bonus
+    state = 'gameover';
+    stopAmbient();
+    showGameOver();
+    return;
+  }
+  currentWorld++;
+  loadWorld(currentWorld);
+  state = 'worldintro';
+  showWorldIntro();
+}
+
+function showGameOver() {
+  document.getElementById('goScore').textContent = score;
+  document.getElementById('goWorld').textContent = (currentWorld + 1);
+  document.getElementById('titlePanel').style.display = 'none';
+  document.getElementById('gameoverPanel').style.display = 'block';
+  document.getElementById('goQualify').style.display = 'none';
+  document.getElementById('goLB').style.display = 'none';
+  document.getElementById('overlay').style.display = 'flex';
+
+  // Check if qualifies for leaderboard
+  fetchLeaderboard(function(scores) {
+    var qualifies = scores.length < 10 || score > scores[scores.length - 1].value;
+    if (qualifies && score > 0) {
+      document.getElementById('goQualify').style.display = 'block';
+    }
+    document.getElementById('goLB').style.display = 'block';
+    renderLB(scores, document.getElementById('goLBBody'));
+  });
+}
+
+function submitScore() {
+  var name = document.getElementById('goName').value.trim() || 'COOPER';
+  fetch('/api/scores', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game: 'corrupted', name: name, value: score })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    document.getElementById('goQualify').style.display = 'none';
+    renderLB(d.scores, document.getElementById('goLBBody'), name.toUpperCase());
+    // Cache locally
+    try { localStorage.setItem('corrupted-scores', JSON.stringify(d.scores)); } catch(e){}
+  })
+  .catch(function() {
+    // Local fallback
+    var local = JSON.parse(localStorage.getItem('corrupted-scores') || '[]');
+    local.push({ name: name.toUpperCase(), value: score });
+    local.sort(function(a,b){ return b.value - a.value; });
+    local = local.slice(0, 10);
+    localStorage.setItem('corrupted-scores', JSON.stringify(local));
+    document.getElementById('goQualify').style.display = 'none';
+    renderLB(local, document.getElementById('goLBBody'), name.toUpperCase());
+  });
+}
+
+// ========== DDA RAYCASTER ==========
+function castRays(p, startCol, endCol, totalCols, zBuffer) {
+  var world = WORLDS[currentWorld];
+  var map = MAPS[currentWorld];
+
+  for (var x = startCol; x < endCol; x++) {
+    var localX = x - startCol;
+    var cameraX = 2.0 * localX / totalCols - 1.0;
+    var rayDirX = p.dirX + p.planeX * cameraX;
+    var rayDirY = p.dirY + p.planeY * cameraX;
+
+    var mapX = Math.floor(p.x);
+    var mapY = Math.floor(p.y);
+
+    var deltaDistX = Math.abs(rayDirX) < 0.00001 ? 1e10 : Math.abs(1.0 / rayDirX);
+    var deltaDistY = Math.abs(rayDirY) < 0.00001 ? 1e10 : Math.abs(1.0 / rayDirY);
+
+    var stepX, stepY, sideDistX, sideDistY;
+
+    if (rayDirX < 0) { stepX = -1; sideDistX = (p.x - mapX) * deltaDistX; }
+    else { stepX = 1; sideDistX = (mapX + 1.0 - p.x) * deltaDistX; }
+    if (rayDirY < 0) { stepY = -1; sideDistY = (p.y - mapY) * deltaDistY; }
+    else { stepY = 1; sideDistY = (mapY + 1.0 - p.y) * deltaDistY; }
+
+    var hit = 0, side = 0;
+    while (hit === 0) {
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
+      else { sideDistY += deltaDistY; mapY += stepY; side = 1; }
+
+      if (mapX < 0 || mapX >= MAP_SIZE || mapY < 0 || mapY >= MAP_SIZE) { hit = 1; break; }
+      var cell = map[mapY][mapX];
+      if (cell >= 1 && cell <= 6) hit = cell;
+      else if (cell === 8) hit = 8;
+    }
+
+    var perpDist;
+    if (side === 0) perpDist = sideDistX - deltaDistX;
+    else perpDist = sideDistY - deltaDistY;
+    if (perpDist < 0.01) perpDist = 0.01;
+
+    zBuffer[localX] = perpDist;
+
+    var lineHeight = Math.floor(CH / perpDist);
+    var drawStart = Math.floor(-lineHeight / 2 + CH / 2);
+    var drawEnd = Math.floor(lineHeight / 2 + CH / 2);
+    if (drawStart < 0) drawStart = 0;
+    if (drawEnd >= CH) drawEnd = CH - 1;
+
+    // Wall texture coordinate (0-1 along the wall surface)
+    var wallX;
+    if (side === 0) wallX = p.y + perpDist * rayDirY;
+    else wallX = p.x + perpDist * rayDirX;
+    wallX = wallX - Math.floor(wallX);
+
+    // Wall colour
+    var colorIdx = (hit >= 1 && hit <= 6) ? hit - 1 : 0;
+    var wallColor = world.wallColors[colorIdx] || world.wallColors[0];
+
+    // Distance darkening
+    var brightness = Math.max(0.15, 1.0 - perpDist / 12);
+    // NS/EW shading
+    if (side === 1) brightness *= 0.7;
+
+    // Exit portal glow
+    var isPortal = false;
+    if (hit === 8 && exitActive) {
+      wallColor = '#00ffc8';
+      brightness = 0.6 + Math.sin(frameCount * 0.05) * 0.3;
+      isPortal = true;
+    } else if (hit === 8) {
+      wallColor = '#333';
+      brightness = 0.3;
+      isPortal = true;
+    }
+
+    // Draw ceiling
+    ctx.fillStyle = world.ceil;
+    ctx.fillRect(x, 0, 1, drawStart);
+
+    // Draw wall base colour
+    ctx.fillStyle = applyBrightness(wallColor, brightness);
+    ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
+
+    // Draw wall texture overlay (per-world procedural patterns)
+    if (!isPortal && drawEnd > drawStart) {
+      var wallH = drawEnd - drawStart;
+      var texRows = 8; // how many texture rows fit on the wall
+      drawWallTexture(x, drawStart, wallH, wallX, brightness, currentWorld, texRows, side);
+    }
+
+    // Draw floor
+    ctx.fillStyle = world.floor;
+    ctx.fillRect(x, drawEnd, 1, CH - drawEnd);
+  }
+}
+
+function applyBrightness(hex, b) {
+  var r = parseInt(hex.substr(1,2), 16);
+  var g = parseInt(hex.substr(3,2), 16);
+  var bl = parseInt(hex.substr(5,2), 16);
+  r = Math.floor(r * b); g = Math.floor(g * b); bl = Math.floor(bl * b);
+  return 'rgb(' + r + ',' + g + ',' + bl + ')';
+}
+
+// Procedural wall texture per world
+function drawWallTexture(x, top, wallH, wallX, brightness, worldIdx, texRows, side) {
+  var rowH = wallH / texRows;
+  if (rowH < 2) return; // too far away for detail
+
+  if (worldIdx === 0) {
+    // Sewers: brick/stone with mortar lines
+    // Horizontal mortar lines
+    for (var r = 1; r < texRows; r++) {
+      var my = top + Math.floor(r * rowH);
+      if (my >= top && my < top + wallH) {
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.35 * brightness) + ')';
+        ctx.fillRect(x, my, 1, Math.max(1, Math.floor(rowH * 0.08)));
+      }
+    }
+    // Vertical mortar (offset every other row)
+    var col = Math.floor(wallX * 4);
+    var colFrac = (wallX * 4) - col;
+    if (colFrac < 0.06 || colFrac > 0.94) {
+      for (var r = 0; r < texRows; r += 2) {
+        var ry = top + Math.floor(r * rowH);
+        var rh = Math.floor(rowH);
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.3 * brightness) + ')';
+        ctx.fillRect(x, ry, 1, rh);
+      }
+    }
+    var colOff = ((wallX + 0.125) * 4) - Math.floor((wallX + 0.125) * 4);
+    if (colOff < 0.06 || colOff > 0.94) {
+      for (var r = 1; r < texRows; r += 2) {
+        var ry = top + Math.floor(r * rowH);
+        var rh = Math.floor(rowH);
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.3 * brightness) + ')';
+        ctx.fillRect(x, ry, 1, rh);
+      }
+    }
+    // Drip stains
+    if (wallX > 0.3 && wallX < 0.35) {
+      ctx.fillStyle = 'rgba(40,60,30,' + (0.3 * brightness) + ')';
+      ctx.fillRect(x, top + Math.floor(wallH * 0.2), 1, Math.floor(wallH * 0.5));
+    }
+  }
+
+  else if (worldIdx === 1) {
+    // School: tile grid with locker lines
+    // Horizontal tile lines
+    for (var r = 1; r < texRows; r++) {
+      var my = top + Math.floor(r * rowH);
+      ctx.fillStyle = 'rgba(200,200,220,' + (0.08 * brightness) + ')';
+      ctx.fillRect(x, my, 1, 1);
+    }
+    // Vertical tile lines (8 cols)
+    var col = Math.floor(wallX * 8);
+    var colFrac = (wallX * 8) - col;
+    if (colFrac < 0.05 || colFrac > 0.95) {
+      ctx.fillStyle = 'rgba(200,200,220,' + (0.08 * brightness) + ')';
+      ctx.fillRect(x, top, 1, wallH);
+    }
+    // Locker handle dot
+    if (wallX > 0.48 && wallX < 0.52) {
+      var handleY = top + Math.floor(wallH * 0.45);
+      ctx.fillStyle = 'rgba(180,180,200,' + (0.2 * brightness) + ')';
+      ctx.fillRect(x, handleY, 1, Math.max(2, Math.floor(wallH * 0.04)));
+    }
+  }
+
+  else if (worldIdx === 2) {
+    // Fairground: vertical stripes (carnival tent)
+    var stripe = Math.floor(wallX * 12);
+    if (stripe % 2 === 0) {
+      ctx.fillStyle = 'rgba(255,220,100,' + (0.12 * brightness) + ')';
+      ctx.fillRect(x, top, 1, wallH);
+    }
+    // Horizontal trim line at top and bottom
+    ctx.fillStyle = 'rgba(255,200,50,' + (0.15 * brightness) + ')';
+    ctx.fillRect(x, top, 1, Math.max(1, Math.floor(wallH * 0.03)));
+    ctx.fillRect(x, top + wallH - Math.max(1, Math.floor(wallH * 0.03)), 1, Math.max(1, Math.floor(wallH * 0.03)));
+  }
+
+  else if (worldIdx === 3) {
+    // Frozen Lab: ice crystal grid with frost highlights
+    // Grid lines
+    for (var r = 1; r < texRows; r++) {
+      var my = top + Math.floor(r * rowH);
+      ctx.fillStyle = 'rgba(150,200,255,' + (0.1 * brightness) + ')';
+      ctx.fillRect(x, my, 1, 1);
+    }
+    var col = Math.floor(wallX * 6);
+    var colFrac = (wallX * 6) - col;
+    if (colFrac < 0.04 || colFrac > 0.96) {
+      ctx.fillStyle = 'rgba(150,200,255,' + (0.1 * brightness) + ')';
+      ctx.fillRect(x, top, 1, wallH);
+    }
+    // Frost shimmer (pseudo-random highlight)
+    var shimmer = Math.sin(wallX * 47.3 + side * 13.7) * 0.5 + 0.5;
+    if (shimmer > 0.85) {
+      var sy = top + Math.floor(wallH * (Math.sin(wallX * 23.1) * 0.3 + 0.4));
+      ctx.fillStyle = 'rgba(200,230,255,' + (0.15 * brightness) + ')';
+      ctx.fillRect(x, sy, 1, Math.max(2, Math.floor(wallH * 0.06)));
+    }
+  }
+
+  else if (worldIdx === 4) {
+    // Volcano: rough stone with lava veins
+    // Stone block lines
+    for (var r = 1; r < texRows; r++) {
+      var my = top + Math.floor(r * rowH);
+      ctx.fillStyle = 'rgba(0,0,0,' + (0.3 * brightness) + ')';
+      ctx.fillRect(x, my, 1, Math.max(1, Math.floor(rowH * 0.06)));
+    }
+    // Lava veins (glowing cracks)
+    var vein = Math.sin(wallX * 31.7 + side * 7.3);
+    if (vein > 0.8) {
+      var vy = top + Math.floor(wallH * (Math.sin(wallX * 19.1) * 0.3 + 0.5));
+      var vh = Math.max(2, Math.floor(wallH * 0.08));
+      ctx.fillStyle = 'rgba(255,100,0,' + (0.25 * brightness) + ')';
+      ctx.fillRect(x, vy, 1, vh);
+    }
+    // Ember glow at base
+    ctx.fillStyle = 'rgba(255,80,0,' + (0.08 * brightness) + ')';
+    ctx.fillRect(x, top + wallH - Math.floor(wallH * 0.15), 1, Math.floor(wallH * 0.15));
+  }
+
+  else if (worldIdx === 5) {
+    // Corruption Core: organic pulsing veins
+    // Vein network
+    var pulse = Math.sin(frameCount * 0.03 + wallX * 20) * 0.5 + 0.5;
+    var vein1 = Math.sin(wallX * 25.3 + side * 5.1);
+    var vein2 = Math.sin(wallX * 17.7 - side * 3.3);
+    if (vein1 > 0.7) {
+      var vy = top + Math.floor(wallH * (Math.sin(wallX * 13.3) * 0.35 + 0.5));
+      ctx.fillStyle = 'rgba(180,60,255,' + (0.2 * pulse * brightness) + ')';
+      ctx.fillRect(x, vy, 1, Math.max(2, Math.floor(wallH * 0.06)));
+    }
+    if (vein2 > 0.75) {
+      var vy2 = top + Math.floor(wallH * (Math.cos(wallX * 11.1) * 0.3 + 0.45));
+      ctx.fillStyle = 'rgba(120,0,200,' + (0.15 * pulse * brightness) + ')';
+      ctx.fillRect(x, vy2, 1, Math.max(2, Math.floor(wallH * 0.05)));
+    }
+    // Corruption glow along edges
+    ctx.fillStyle = 'rgba(140,40,220,' + (0.06 * pulse * brightness) + ')';
+    ctx.fillRect(x, top, 1, Math.floor(wallH * 0.1));
+    ctx.fillRect(x, top + wallH - Math.floor(wallH * 0.1), 1, Math.floor(wallH * 0.1));
+  }
+}
+
+// ========== SPRITE RENDERING ==========
+function renderSprites(p, startCol, endCol, totalCols, zBuffer) {
+  // Collect all sprites
+  var sprites = [];
+
+  // Zombies
+  for (var i = 0; i < zombies.length; i++) {
+    var z = zombies[i];
+    if (z.state === 'dead' && z.deadTimer <= 0) continue;
+
+    // Shadow zombie visibility
+    var dx = z.x - p.x, dy = z.y - p.y;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (z.type === 'shadow' && !z.isBoss && dist > 4 && z.state !== 'dead') continue;
+
+    sprites.push({
+      x: z.x, y: z.y,
+      type: 'zombie',
+      ref: z,
+      dist: dist
+    });
+  }
+
+  // Loot
+  for (var i = 0; i < lootItems.length; i++) {
+    var l = lootItems[i];
+    var dx = l.x - p.x, dy = l.y - p.y;
+    sprites.push({
+      x: l.x, y: l.y,
+      type: 'loot',
+      ref: l,
+      dist: Math.sqrt(dx*dx + dy*dy)
+    });
+  }
+
+  // Projectiles
+  for (var i = 0; i < projectiles.length; i++) {
+    var pr = projectiles[i];
+    var dx = pr.x - p.x, dy = pr.y - p.y;
+    sprites.push({
+      x: pr.x, y: pr.y,
+      type: 'projectile',
+      ref: pr,
+      dist: Math.sqrt(dx*dx + dy*dy)
+    });
+  }
+
+  // Sort back to front
+  sprites.sort(function(a, b) { return b.dist - a.dist; });
+
+  // Render each sprite
+  var invDet = 1.0 / (p.planeX * p.dirY - p.dirX * p.planeY);
+
+  for (var i = 0; i < sprites.length; i++) {
+    var s = sprites[i];
+    var sx = s.x - p.x, sy = s.y - p.y;
+
+    var transformX = invDet * (p.dirY * sx - p.dirX * sy);
+    var transformY = invDet * (-p.planeY * sx + p.planeX * sy);
+
+    if (transformY <= 0.1) continue;
+
+    var spriteScreenX = Math.floor((totalCols / 2) * (1 + transformX / transformY)) + startCol;
+
+    var spriteHeight = Math.abs(Math.floor(CH / transformY));
+    var spriteWidth;
+
+    // Per-type width ratios: zombies are tall and narrow, with variation
+    var ZOMBIE_WIDTH = {
+      shambler: 0.35, lurker: 0.30, clown: 0.28,
+      cryo: 0.45, lava: 0.32, shadow: 0.25
+    };
+
+    if (s.type === 'zombie') {
+      var wRatio = s.ref.isBoss ? 0.55 : (ZOMBIE_WIDTH[s.ref.type] || 0.35);
+      spriteWidth = Math.floor(spriteHeight * wRatio);
+    } else if (s.type === 'loot' || s.type === 'projectile') {
+      spriteHeight = Math.floor(spriteHeight * 0.4);
+      spriteWidth = Math.floor(spriteHeight * 0.8);
+    } else {
+      spriteWidth = spriteHeight;
+    }
+
+    var drawStartY = Math.floor(-spriteHeight / 2 + CH / 2);
+    var drawStartX = Math.floor(-spriteWidth / 2 + spriteScreenX);
+
+    // Brightness based on distance
+    var bright = Math.max(0.15, 1.0 - s.dist / 12);
+
+    // Clip and draw
+    if (s.type === 'zombie') {
+      // Draw zombie with shaped body (head, torso, arms, legs)
+      var deadBright = s.ref.state === 'dead' ? bright * 0.4 : bright;
+      var zCol = s.ref.staggerTimer > 0 ? '#fff' : s.ref.color;
+      var headH = Math.floor(spriteHeight * 0.2);
+      var torsoH = Math.floor(spriteHeight * 0.4);
+      var legH = spriteHeight - headH - torsoH;
+      var headW = Math.floor(spriteWidth * 0.6);
+      var torsoW = spriteWidth;
+      var armW = Math.floor(spriteWidth * 0.2);
+      var legW = Math.floor(spriteWidth * 0.3);
+
+      var headX = drawStartX + Math.floor((spriteWidth - headW) / 2);
+      var headY = drawStartY;
+      var torsoX = drawStartX;
+      var torsoY = drawStartY + headH;
+      var armExtend = s.ref.state === 'chase' || s.ref.state === 'attack' ? Math.floor(spriteWidth * 0.3) : 0;
+
+      // Head
+      for (var stripe = headX; stripe < headX + headW; stripe++) {
+        if (stripe < startCol || stripe >= endCol) continue;
+        if (transformY >= zBuffer[stripe - startCol]) continue;
+        var t = Math.max(headY, 0);
+        var b = Math.min(headY + headH, CH);
+        if (b > t) {
+          ctx.fillStyle = applyBrightness(zCol, deadBright);
+          ctx.fillRect(stripe, t, 1, b - t);
+        }
+        // Eyes
+        var eyeY = headY + Math.floor(headH * 0.4);
+        var eyeSize = Math.max(1, Math.floor(headH * 0.25));
+        var relX = stripe - headX;
+        var headCX = headW / 2;
+        if ((Math.abs(relX - headCX + headW * 0.15) < eyeSize * 0.7) ||
+            (Math.abs(relX - headCX - headW * 0.15) < eyeSize * 0.7)) {
+          if (eyeY > 0 && eyeY < CH) {
+            ctx.fillStyle = s.ref.state === 'dead' ? '#500' : '#f00';
+            ctx.fillRect(stripe, eyeY, 1, eyeSize);
+          }
+        }
+      }
+
+      // Torso (slightly narrower in middle for shape)
+      for (var stripe = torsoX; stripe < torsoX + torsoW; stripe++) {
+        if (stripe < startCol || stripe >= endCol) continue;
+        if (transformY >= zBuffer[stripe - startCol]) continue;
+        var relX = stripe - torsoX;
+        var nx = relX / torsoW; // 0-1 across torso
+        // Narrow waist: skip outer 15% at midpoint
+        var waistNarrow = Math.sin(((stripe - torsoX) / torsoW) * Math.PI);
+        var rowTop = torsoY;
+        var rowBot = torsoY + torsoH;
+        // Taper the sides
+        if (nx < 0.1 || nx > 0.9) {
+          rowTop = torsoY + Math.floor(torsoH * 0.15);
+        }
+        var t = Math.max(rowTop, 0);
+        var b = Math.min(rowBot, CH);
+        if (b > t) {
+          ctx.fillStyle = applyBrightness(zCol, deadBright * (0.85 + waistNarrow * 0.15));
+          ctx.fillRect(stripe, t, 1, b - t);
+        }
+      }
+
+      // Arms (extended when chasing/attacking)
+      var armY = torsoY + Math.floor(torsoH * 0.05);
+      var armH = Math.floor(torsoH * 0.5);
+      // Left arm
+      var laX = torsoX - armW - armExtend;
+      for (var stripe = laX; stripe < laX + armW; stripe++) {
+        if (stripe < startCol || stripe >= endCol) continue;
+        if (transformY >= zBuffer[stripe - startCol]) continue;
+        var t = Math.max(armY, 0);
+        var b = Math.min(armY + armH, CH);
+        if (b > t) {
+          ctx.fillStyle = applyBrightness(zCol, deadBright * 0.8);
+          ctx.fillRect(stripe, t, 1, b - t);
+        }
+      }
+      // Right arm
+      var raX = torsoX + torsoW + armExtend;
+      for (var stripe = raX; stripe < raX + armW; stripe++) {
+        if (stripe < startCol || stripe >= endCol) continue;
+        if (transformY >= zBuffer[stripe - startCol]) continue;
+        var t = Math.max(armY, 0);
+        var b = Math.min(armY + armH, CH);
+        if (b > t) {
+          ctx.fillStyle = applyBrightness(zCol, deadBright * 0.8);
+          ctx.fillRect(stripe, t, 1, b - t);
+        }
+      }
+
+      // Legs (two separate columns with gap)
+      var legY = torsoY + torsoH;
+      var legGap = Math.max(1, Math.floor(spriteWidth * 0.1));
+      var leftLegX = drawStartX + Math.floor(spriteWidth * 0.15);
+      var rightLegX = drawStartX + Math.floor(spriteWidth * 0.55);
+      for (var leg = 0; leg < 2; leg++) {
+        var lx = leg === 0 ? leftLegX : rightLegX;
+        for (var stripe = lx; stripe < lx + legW; stripe++) {
+          if (stripe < startCol || stripe >= endCol) continue;
+          if (transformY >= zBuffer[stripe - startCol]) continue;
+          var t = Math.max(legY, 0);
+          var b = Math.min(legY + legH, CH);
+          if (b > t) {
+            ctx.fillStyle = applyBrightness(zCol, deadBright * 0.7);
+            ctx.fillRect(stripe, t, 1, b - t);
+          }
+        }
+      }
+
+      // Boss crown
+      if (s.ref.isBoss) {
+        var crownY = headY - Math.floor(headH * 0.5);
+        var crownW = Math.floor(headW * 0.8);
+        var crownX = headX + Math.floor((headW - crownW) / 2);
+        for (var stripe = crownX; stripe < crownX + crownW; stripe++) {
+          if (stripe < startCol || stripe >= endCol) continue;
+          if (transformY >= zBuffer[stripe - startCol]) continue;
+          if (crownY > 0 && crownY < CH) {
+            // Crown spikes
+            var relC = (stripe - crownX) / crownW;
+            var spikeH = Math.floor(headH * 0.4);
+            if (relC < 0.2 || (relC > 0.4 && relC < 0.6) || relC > 0.8) {
+              spikeH = Math.floor(headH * 0.7);
+            }
+            ctx.fillStyle = applyBrightness('#ffe44d', deadBright);
+            ctx.fillRect(stripe, crownY, 1, spikeH);
+          }
+        }
+      }
+
+    } else {
+      // Non-zombie sprites: draw as shaped icons
+      // Check z-buffer at centre column
+      var checkCol = spriteScreenX - startCol;
+      if (checkCol < 0 || checkCol >= totalCols || transformY >= zBuffer[checkCol]) continue;
+
+      var cx = spriteScreenX;
+      var cy = drawStartY + Math.floor(spriteHeight / 2);
+      var sz = Math.max(4, Math.floor(spriteHeight * 0.5));
+      // Loot bob
+      if (s.type === 'loot') {
+        s.ref.bobPhase += 0.002;
+        cy += Math.floor(Math.sin(s.ref.bobPhase + frameCount * 0.05) * sz * 0.3);
+      }
+
+      if (cx < startCol || cx >= endCol) continue;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(startCol, 0, endCol - startCol, CH);
+      ctx.clip();
+
+      if (s.type === 'projectile') {
+        // Glowing orb
+        ctx.fillStyle = s.ref.color;
+        ctx.shadowColor = s.ref.color;
+        ctx.shadowBlur = sz;
+        ctx.beginPath();
+        ctx.arc(cx, cy, sz * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (s.type === 'loot') {
+        var info = LOOT_INFO[s.ref.type];
+        var col = info ? info.color : '#fff';
+        var slot = info ? info.slot : '';
+
+        if (slot === 'consumable') {
+          // Health: green cross
+          var csz = Math.floor(sz * 0.4);
+          ctx.fillStyle = applyBrightness('#44cc44', bright);
+          ctx.fillRect(cx - csz, cy - csz * 3, csz * 2, csz * 6);
+          ctx.fillRect(cx - csz * 3, cy - csz, csz * 6, csz * 2);
+          // White outline glow
+          ctx.strokeStyle = 'rgba(100,255,100,' + (0.4 * bright) + ')';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(cx - csz * 3 - 1, cy - csz * 3 - 1, csz * 6 + 2, csz * 6 + 2);
+        } else if (slot === 'armor') {
+          // Armour: chestplate shape (trapezoid + shoulders)
+          ctx.fillStyle = applyBrightness(col, bright);
+          ctx.beginPath();
+          ctx.moveTo(cx - sz * 0.5, cy - sz * 0.6); // left shoulder
+          ctx.lineTo(cx - sz * 0.7, cy - sz * 0.3); // left shoulder edge
+          ctx.lineTo(cx - sz * 0.4, cy + sz * 0.6); // bottom left
+          ctx.lineTo(cx + sz * 0.4, cy + sz * 0.6); // bottom right
+          ctx.lineTo(cx + sz * 0.7, cy - sz * 0.3); // right shoulder edge
+          ctx.lineTo(cx + sz * 0.5, cy - sz * 0.6); // right shoulder
+          ctx.lineTo(cx, cy - sz * 0.4);              // neckline
+          ctx.closePath();
+          ctx.fill();
+          // Centre line
+          ctx.strokeStyle = 'rgba(255,255,255,' + (0.2 * bright) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - sz * 0.35);
+          ctx.lineTo(cx, cy + sz * 0.5);
+          ctx.stroke();
+        } else if (slot === 'shield') {
+          // Shield: pointed oval / kite shape
+          ctx.fillStyle = applyBrightness(col, bright);
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - sz * 0.7);               // top point
+          ctx.quadraticCurveTo(cx + sz * 0.6, cy - sz * 0.2, cx + sz * 0.5, cy + sz * 0.2);
+          ctx.lineTo(cx, cy + sz * 0.7);                // bottom point
+          ctx.lineTo(cx - sz * 0.5, cy + sz * 0.2);
+          ctx.quadraticCurveTo(cx - sz * 0.6, cy - sz * 0.2, cx, cy - sz * 0.7);
+          ctx.fill();
+          // Boss / emblem highlight
+          ctx.strokeStyle = 'rgba(255,255,255,' + (0.25 * bright) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - sz * 0.4);
+          ctx.lineTo(cx, cy + sz * 0.4);
+          ctx.stroke();
+        } else if (slot === 'weapon') {
+          // Sword: blade + crossguard + handle
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(-0.5);
+          // Blade
+          ctx.fillStyle = applyBrightness(col, bright);
+          ctx.beginPath();
+          ctx.moveTo(0, -sz * 0.9);   // tip
+          ctx.lineTo(-sz * 0.12, -sz * 0.1);
+          ctx.lineTo(sz * 0.12, -sz * 0.1);
+          ctx.closePath();
+          ctx.fill();
+          // Crossguard
+          ctx.fillStyle = applyBrightness('#aa8800', bright);
+          ctx.fillRect(-sz * 0.3, -sz * 0.1, sz * 0.6, sz * 0.1);
+          // Handle
+          ctx.fillStyle = applyBrightness('#553300', bright);
+          ctx.fillRect(-sz * 0.06, 0, sz * 0.12, sz * 0.4);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+  }
+}
+
+// ========== HUD ==========
+function drawHUD(p, left, width) {
+  var right = left + width;
+  var hudH = 50;
+  var y = CH - hudH;
+
+  // Semi-transparent HUD background
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(left, y, width, hudH);
+
+  // Health bar
+  var barX = left + 8, barY = y + 8, barW = 80, barH = 12;
+  ctx.fillStyle = '#333';
+  ctx.fillRect(barX, barY, barW, barH);
+  var hpPct = p.hp / p.maxHP;
+  var hpColor = hpPct > 0.5 ? '#0f0' : (hpPct > 0.25 ? '#ff0' : '#f00');
+  if (p.damageFlash > 0 && frameCount % 4 < 2) hpColor = '#fff';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(barX, barY, barW * hpPct, barH);
+  ctx.strokeStyle = '#666';
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  // HP text
+  ctx.fillStyle = '#fff';
+  ctx.font = '10px monospace';
+  ctx.fillText(p.hp + '/' + p.maxHP, barX + 2, barY + 10);
+
+  // Gear icons
+  var iconX = barX, iconY = barY + 16;
+  if (p.armor) {
+    ctx.fillStyle = LOOT_INFO[p.armor].color;
+    ctx.fillRect(iconX, iconY, 10, 12);
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px monospace';
+    ctx.fillText('A', iconX + 2, iconY + 9);
+    iconX += 14;
+  }
+  if (p.shield) {
+    ctx.fillStyle = LOOT_INFO[p.shield].color;
+    ctx.beginPath();
+    ctx.moveTo(iconX + 5, iconY);
+    ctx.lineTo(iconX + 10, iconY + 3);
+    ctx.lineTo(iconX + 10, iconY + 9);
+    ctx.lineTo(iconX + 5, iconY + 12);
+    ctx.lineTo(iconX, iconY + 9);
+    ctx.lineTo(iconX, iconY + 3);
+    ctx.closePath();
+    ctx.fill();
+    iconX += 14;
+  }
+  if (p.weapon) {
+    ctx.fillStyle = LOOT_INFO[p.weapon].color;
+    ctx.fillRect(iconX + 3, iconY, 4, 12);
+    ctx.fillRect(iconX, iconY + 4, 10, 3);
+  }
+
+  // Weapon sprite (bottom-right, first-person perspective, semi-transparent)
+  // Positioned like DOOM: offset right, angled as if held in front of you
+  var weapX = left + width * 0.65;
+  var weapY = CH + 30;
+  var bob = p.isMoving ? Math.sin(p.bobPhase) * 8 : 0;
+  var swing = p.attackAnim > 0 ? (10 - p.attackAnim) * 6 : 0;
+
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  if (p.weapon) {
+    // Sword held in right hand, blade pointing up and forward
+    var sColor = LOOT_INFO[p.weapon].color;
+    ctx.save();
+    ctx.translate(weapX + swing * 0.8, weapY + bob);
+    ctx.rotate(-0.4 - swing * 0.04);
+    // Arm coming from bottom-right
+    ctx.fillStyle = '#997766';
+    ctx.fillRect(-8, -10, 18, 50);
+    // Hand gripping
+    ctx.fillStyle = '#bb9977';
+    ctx.beginPath();
+    ctx.ellipse(1, -14, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Blade
+    ctx.fillStyle = sColor;
+    ctx.fillRect(-6, -140, 12, 110);
+    // Blade edge highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(-1, -135, 3, 100);
+    // Blade tip
+    ctx.beginPath();
+    ctx.moveTo(-6, -140);
+    ctx.lineTo(0, -158);
+    ctx.lineTo(6, -140);
+    ctx.fillStyle = sColor;
+    ctx.fill();
+    // Crossguard
+    ctx.fillStyle = '#aa8800';
+    ctx.fillRect(-20, -30, 40, 7);
+    // Handle wrap
+    ctx.fillStyle = '#553300';
+    ctx.fillRect(-5, -24, 10, 18);
+    // Pommel
+    ctx.fillStyle = '#aa8800';
+    ctx.beginPath();
+    ctx.arc(0, -2, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // Fist: right arm reaching forward from bottom-right
+    ctx.save();
+    ctx.translate(weapX + swing * 2.5, weapY + bob);
+    ctx.rotate(-0.15);
+    // Forearm (perspective: wider at bottom, narrower at top)
+    ctx.fillStyle = '#bb9977';
+    ctx.beginPath();
+    ctx.moveTo(-16, 10);
+    ctx.lineTo(-10, -50);
+    ctx.lineTo(12, -50);
+    ctx.lineTo(18, 10);
+    ctx.closePath();
+    ctx.fill();
+    // Fist (clenched)
+    ctx.fillStyle = '#ddaa99';
+    ctx.beginPath();
+    ctx.ellipse(1, -65 - swing, 24, 20, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+    // Knuckle bumps
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    for (var k = -1; k <= 1; k++) {
+      ctx.beginPath();
+      ctx.arc(k * 12, -72 - swing, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Thumb
+    ctx.fillStyle = '#cc9988';
+    ctx.beginPath();
+    ctx.ellipse(-22, -58 - swing, 8, 12, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Blocking indicator
+  if (p.blocking) {
+    ctx.fillStyle = 'rgba(100,200,255,0.3)';
+    ctx.fillRect(left, 0, width, CH);
+    ctx.fillStyle = '#88ccff';
+    ctx.font = '12px monospace';
+    ctx.fillText('BLOCKING', left + width/2 - 30, CH - 55);
+  }
+
+  // Minimap (positioned above HUD bar)
+  var mmSize = numPlayers === 1 ? 90 : 65;
+  var mmX = right - mmSize - 8;
+  var mmY = y - mmSize - 4;
+  var cellSize = mmSize / MAP_SIZE;
+  var map = MAPS[currentWorld];
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(mmX - 2, mmY - 2, mmSize + 4, mmSize + 4);
+  ctx.strokeStyle = 'rgba(100,100,100,0.4)';
+  ctx.strokeRect(mmX - 2, mmY - 2, mmSize + 4, mmSize + 4);
+
+  for (var my = 0; my < MAP_SIZE; my++) {
+    for (var mx = 0; mx < MAP_SIZE; mx++) {
+      var cell = map[my][mx];
+      if (cell >= 1 && cell <= 6) {
+        ctx.fillStyle = 'rgba(100,100,100,0.6)';
+        ctx.fillRect(mmX + mx * cellSize, mmY + my * cellSize, cellSize, cellSize);
+      } else if (cell === 8 && exitActive) {
+        ctx.fillStyle = '#00ffc8';
+        ctx.fillRect(mmX + mx * cellSize, mmY + my * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+
+  // Player dot + direction cone on minimap
+  var ppx = mmX + p.x * cellSize;
+  var ppy = mmY + p.y * cellSize;
+  var coneLen = cellSize * 3.5;
+  var coneSpread = 0.4;
+  // Direction cone
+  ctx.fillStyle = p.id === 0 ? 'rgba(0,255,0,0.25)' : 'rgba(255,255,0,0.25)';
+  ctx.beginPath();
+  ctx.moveTo(ppx, ppy);
+  ctx.lineTo(ppx + Math.cos(Math.atan2(p.dirY, p.dirX) - coneSpread) * coneLen,
+             ppy + Math.sin(Math.atan2(p.dirY, p.dirX) - coneSpread) * coneLen);
+  ctx.lineTo(ppx + Math.cos(Math.atan2(p.dirY, p.dirX) + coneSpread) * coneLen,
+             ppy + Math.sin(Math.atan2(p.dirY, p.dirX) + coneSpread) * coneLen);
+  ctx.closePath();
+  ctx.fill();
+  // Player dot
+  ctx.fillStyle = p.id === 0 ? '#0f0' : '#ff0';
+  ctx.beginPath();
+  ctx.arc(ppx, ppy, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Zombie dots
+  for (var i = 0; i < zombies.length; i++) {
+    var z = zombies[i];
+    if (z.state === 'dead') continue;
+    var dx = z.x - p.x, dy = z.y - p.y;
+    if (Math.sqrt(dx*dx+dy*dy) > 8) continue;
+    ctx.fillStyle = z.isBoss ? '#ff0' : '#f00';
+    ctx.fillRect(mmX + z.x * cellSize - 1, mmY + z.y * cellSize - 1, 2, 2);
+  }
+
+  // Score (top-left of viewport)
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px monospace';
+  ctx.fillText('Score: ' + score, left + 8, 18);
+
+  // World indicator (top-right of viewport)
+  ctx.fillStyle = '#888';
+  ctx.font = '12px monospace';
+  var worldText = 'W' + (currentWorld + 1) + ': ' + WORLDS[currentWorld].name;
+  ctx.fillText(worldText, right - ctx.measureText(worldText).width - 8, 18);
+
+  // Player label for 2P
+  if (numPlayers > 1) {
+    ctx.fillStyle = p.id === 0 ? '#00ffc8' : '#ffcc00';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('P' + (p.id + 1), left + 8, 34);
+  }
+
+  // Boss HP bar at top centre when boss is alive
+  if (boss && boss.state !== 'dead') {
+    var bossBarW = Math.min(200, width - 40);
+    var bossBarX = left + (width - bossBarW) / 2;
+    var bossBarY = 30;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(bossBarX, bossBarY, bossBarW, 8);
+    var bossHpPct = boss.hp / boss.maxHP;
+    ctx.fillStyle = boss.phase === 2 ? '#ff4444' : '#ff8800';
+    ctx.fillRect(bossBarX, bossBarY, bossBarW * bossHpPct, 8);
+    ctx.strokeStyle = '#666';
+    ctx.strokeRect(bossBarX, bossBarY, bossBarW, 8);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace';
+    var bossLabel = boss.name + (boss.phase === 2 ? ' (Enraged)' : '');
+    ctx.fillText(bossLabel, bossBarX, bossBarY - 4);
+  }
+}
+
+// ========== DAMAGE FLASH ==========
+function drawDamageFlash(p, left, width) {
+  if (p.damageFlash > 0) {
+    ctx.fillStyle = 'rgba(255,0,0,' + (p.damageFlash / 20) + ')';
+    ctx.fillRect(left, 0, width, CH);
+  }
+}
+
+// ========== MAIN LOOP ==========
+function gameLoop() {
+  requestAnimationFrame(gameLoop);
+  frameCount++;
+
+  if (state === 'worldintro') {
+    worldIntroTimer--;
+    if (worldIntroTimer <= 0) {
+      document.getElementById('worldIntro').style.display = 'none';
+      state = 'playing';
+    }
+    // Draw dark screen with world name
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = '#b44dff';
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('World ' + (currentWorld+1), CW/2, CH/2 - 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '18px monospace';
+    ctx.fillText(WORLDS[currentWorld].name, CW/2, CH/2 + 10);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  if (state !== 'playing') return;
+
+  // Update
+  for (var i = 0; i < players.length; i++) {
+    updatePlayer(players[i]);
+    pickupLoot(players[i]);
+  }
+  for (var i = 0; i < zombies.length; i++) {
+    updateZombie(zombies[i]);
+  }
+  updateProjectiles();
+
+  // Clean up dead zombies past their timer
+  for (var i = zombies.length - 1; i >= 0; i--) {
+    if (zombies[i].state === 'dead' && zombies[i].deadTimer <= 0 && !zombies[i].isBoss) {
+      zombies.splice(i, 1);
+    }
+  }
+
+  // Screen shake
+  if (shakeTimer > 0) shakeTimer--;
+
+  // Render
+  ctx.save();
+  if (shakeTimer > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * shakeIntensity,
+      (Math.random() - 0.5) * shakeIntensity
+    );
+  }
+
+  if (numPlayers === 1) {
+    var p = players[0];
+    if (!p.alive) {
+      ctx.fillStyle = '#200';
+      ctx.fillRect(0, 0, CW, CH);
+    } else {
+      var zBuffer = new Array(CW);
+      castRays(p, 0, CW, CW, zBuffer);
+      renderSprites(p, 0, CW, CW, zBuffer);
+      drawDamageFlash(p, 0, CW);
+      drawHUD(p, 0, CW);
+    }
+  } else {
+    // 2P split screen
+    var halfW = CW / 2;
+
+    // Player 1 (left)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, halfW, CH);
+    ctx.clip();
+    if (players[0].alive) {
+      var zBuf1 = new Array(Math.floor(halfW));
+      castRays(players[0], 0, Math.floor(halfW), Math.floor(halfW), zBuf1);
+      renderSprites(players[0], 0, Math.floor(halfW), Math.floor(halfW), zBuf1);
+      drawDamageFlash(players[0], 0, Math.floor(halfW));
+      drawHUD(players[0], 0, Math.floor(halfW));
+    } else {
+      ctx.fillStyle = '#200';
+      ctx.fillRect(0, 0, halfW, CH);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px monospace';
+      ctx.fillText('DEAD', halfW/2 - 20, CH/2);
+    }
+    ctx.restore();
+
+    // Player 2 (right)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(Math.floor(halfW), 0, Math.ceil(halfW), CH);
+    ctx.clip();
+    if (players[1].alive) {
+      var zBuf2 = new Array(Math.ceil(halfW));
+      castRays(players[1], Math.floor(halfW), CW, Math.ceil(halfW), zBuf2);
+      renderSprites(players[1], Math.floor(halfW), CW, Math.ceil(halfW), zBuf2);
+      drawDamageFlash(players[1], Math.floor(halfW), Math.ceil(halfW));
+      drawHUD(players[1], Math.floor(halfW), Math.ceil(halfW));
+    } else {
+      ctx.fillStyle = '#200';
+      ctx.fillRect(Math.floor(halfW), 0, Math.ceil(halfW), CH);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px monospace';
+      ctx.fillText('DEAD', Math.floor(halfW) + halfW/2 - 20, CH/2);
+    }
+    ctx.restore();
+
+    // Divider line
+    ctx.fillStyle = '#333';
+    ctx.fillRect(Math.floor(halfW) - 1, 0, 2, CH);
+  }
+
+  ctx.restore();
+
+  // Zombie groan sounds
+  if (frameCount % 120 === 0) {
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      if (z.state === 'chase' || z.state === 'attack') {
+        var dx = z.x - players[0].x, dy = z.y - players[0].y;
+        if (Math.sqrt(dx*dx+dy*dy) < 6) {
+          playSound(80 + Math.random()*40, 'sawtooth', 0.2, 0.04, Math.random()*100-50);
+          break;
+        }
+      }
+    }
+  }
+}
+
+gameLoop();
+</script>
+</body>
+</html>

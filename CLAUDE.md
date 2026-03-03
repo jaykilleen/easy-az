@@ -38,6 +38,10 @@ A rope puzzle game by Lil (`public/games/cat-vs-mouse.html`). Guide your cat, ho
 
 A maze runner by Jaykill (`public/games/descent.html`). 1-player, procedurally generated floors with flashlight cone vision and fog of war. 4 selectable dinosaur characters (Slate, Pixel, Fern, Echo) each with unique visual themes and traits. Sprint with stamina, collect breadcrumbs, and find what Az lost at the bottom. Az appears as a rescue guide if you get lost. Scored by total time (ASC leaderboard).
 
+### Corrupted
+
+A first-person raycaster zombie fighter by Cooper (`public/games/corrupted.html`). 1 or 2 player split screen. Fight through 6 themed worlds (sewers, school, fairground, frozen lab, volcano, corruption core) with unique zombie types and bosses. Start with fists, loot armour, shields and swords from defeated zombies. Points-based scoring (DESC leaderboard).
+
 ### Charlie & Cooper's Space Dodge
 
 The first game in the EZ-AZ collection. A two-player co-op space shooter with:

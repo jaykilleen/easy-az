@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ez-az-20260303-1900';
+const CACHE_NAME = 'ez-az-20260303-2100';
 const SHELL = [
   '/',
   '/games/space-dodge.html',
@@ -6,6 +6,7 @@ const SHELL = [
   '/games/cat-vs-mouse.html',
   '/games/dodgeball.html',
   '/games/descent.html',
+  '/games/corrupted.html',
   '/help.html',
   '/prompt.html',
   '/licence.html',

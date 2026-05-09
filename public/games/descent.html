@@ -829,6 +829,9 @@ document.addEventListener('keydown', function(e) {
     if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
   }
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight','KeyW','KeyA','KeyS','KeyD'].includes(e.code)) {
+    e.preventDefault();
+  }
 });
 document.addEventListener('keyup', function(e) {
   keys[e.code] = false;

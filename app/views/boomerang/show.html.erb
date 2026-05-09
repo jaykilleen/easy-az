@@ -37,7 +37,7 @@
     font-size: clamp(1.6rem, 3vw, 3rem); font-weight: 900;
     background: linear-gradient(135deg, var(--br-orange), var(--br-gold));
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    flex-shrink: 0;
+    flex-shrink: 0; text-decoration: none;
   }
   .br-title {
     font-size: clamp(1rem, 1.6vw, 1.6rem); font-weight: 800;
@@ -305,7 +305,7 @@
 
 <div class="br" id="br">
   <header class="br-header">
-    <div class="br-logo">EZ-AZ</div>
+    <a class="br-logo" href="/tv">EZ-AZ</a>
     <div class="br-title">Boomerang Brawl</div>
     <button class="br-btn" id="br-mute-btn" type="button" aria-pressed="false">🔊</button>
     <button class="br-btn" onclick="window.location.href='/tv'" title="Exit">✕ Exit</button>

@@ -634,9 +634,38 @@
       border-radius: 12px;
       padding: 28px 32px;
       min-width: 320px;
-      max-width: 400px;
+      max-width: 640px;
+      width: 90vw;
       text-align: center;
       position: relative;
+    }
+
+    .lb-panels {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .lb-panel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .lb-panel-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: #888;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e1e30;
+    }
+
+    @media (max-width: 540px) {
+      .lb-panels { flex-direction: column; }
     }
 
     .scores-modal-title {
@@ -681,6 +710,10 @@
 
     .scores-modal .lb-row.placeholder {
       color: #333;
+    }
+
+    .scores-modal .lb-row.mine {
+      color: #00ffc8;
     }
 
     /* Coming soon placeholder */
@@ -2773,26 +2806,48 @@
                String(millis).padStart(3, '0');
       }
 
-      function renderScores(scores, game, myBest) {
+      function renderScores(scores, game, myBest, myScores, playerName) {
         var body = document.getElementById('scoresBody');
-        scores = scores || [];
-        var html = '';
-        if (scores.length === 0) {
-          html += '<div class="lb-empty">No scores yet. Be the first!</div>';
+        scores   = scores   || [];
+        myScores = myScores || [];
+        var isTime = timeGames[game];
+
+        function fmtVal(v) {
+          return isTime ? formatTime(v) : v + ' pts';
         }
-        scores.forEach(function (s, i) {
-          var val = timeGames[game] ? formatTime(s.value) : s.value + ' pts';
-          html += '<div class="lb-row"><span>' + (i + 1) + '. ' + s.name + '</span><span>' + val + '</span></div>';
-        });
-        for (var i = scores.length; i < 10; i++) {
-          html += '<div class="lb-row placeholder"><span>' + (i + 1) + '. ---</span><span>-</span></div>';
+
+        function buildGlobalPanel() {
+          var h = '<div class="lb-panel"><div class="lb-panel-title">Global Top 10</div>';
+          if (scores.length === 0) {
+            h += '<div class="lb-empty">No scores yet. Be the first!</div>';
+          }
+          scores.forEach(function (s, i) {
+            var isMine = playerName && s.name === playerName;
+            h += '<div class="lb-row' + (isMine ? ' mine' : '') + '"><span>' + (i + 1) + '. ' + s.name + '</span><span>' + fmtVal(s.value) + '</span></div>';
+          });
+          for (var i = scores.length; i < 10; i++) {
+            h += '<div class="lb-row placeholder"><span>' + (i + 1) + '. ---</span><span>-</span></div>';
+          }
+          return h + '</div>';
         }
-        if (myBest) {
-          var val = timeGames[game] ? formatTime(myBest.value) : myBest.value + ' pts';
-          html += '<div class="lb-row" style="margin-top:12px;border-top:1px solid #2a2a4a;padding-top:10px;color:#ffe44d;">'
-                + '<span>YOUR BEST</span><span>' + val + '</span></div>';
+
+        function buildPersonalPanel() {
+          var h = '<div class="lb-panel"><div class="lb-panel-title">My Best</div>';
+          if (myScores.length === 0) {
+            h += '<div class="lb-empty" style="font-size:11px;">Play to get on the board!</div>';
+          } else {
+            myScores.forEach(function (s, i) {
+              h += '<div class="lb-row mine"><span>' + (i + 1) + '. ' + s.name + '</span><span>' + fmtVal(s.value) + '</span></div>';
+            });
+          }
+          return h + '</div>';
         }
-        body.innerHTML = html;
+
+        if (playerName) {
+          body.innerHTML = '<div class="lb-panels">' + buildGlobalPanel() + buildPersonalPanel() + '</div>';
+        } else {
+          body.innerHTML = buildGlobalPanel();
+        }
       }
 
       var backdrop = document.getElementById('scoresModal');
@@ -2809,8 +2864,8 @@
 
           fetch('/api/scores?game=' + game)
             .then(function (r) { return r.json(); })
-            .then(function (d) { renderScores(d.scores, game, d.my_best); })
-            .catch(function () { renderScores([], game, null); });
+            .then(function (d) { renderScores(d.scores, game, d.my_best, d.my_scores, d.player); })
+            .catch(function () { renderScores([], game, null, [], null); });
         });
       });
 

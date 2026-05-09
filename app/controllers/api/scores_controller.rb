@@ -7,11 +7,12 @@ module Api
         return render json: { error: "Unknown game" }, status: :bad_request
       end
 
-      top     = Score.top_10(game).map { |s| { "name" => s.name, "value" => s.value } }
-      my_best = my_best_score(game)
+      top      = Score.top_10(game).map { |s| { "name" => s.name, "value" => s.value } }
+      my_best  = my_best_score(game)
+      my_scores = my_personal_scores(game)
 
       response.headers["Cache-Control"] = "no-store"
-      render json: { scores: top, my_best: my_best, player: current_player&.username }
+      render json: { scores: top, my_best: my_best, my_scores: my_scores, player: current_player&.username }
     end
 
     def create
@@ -34,10 +35,11 @@ module Api
 
       Score.create!(score_attrs)
 
-      top     = Score.top_10(game).map { |s| { "name" => s.name, "value" => s.value } }
-      my_best = my_best_score(game)
+      top      = Score.top_10(game).map { |s| { "name" => s.name, "value" => s.value } }
+      my_best  = my_best_score(game)
+      my_scores = my_personal_scores(game)
 
-      render json: { scores: top, my_best: my_best, player: current_player&.username }, status: :created
+      render json: { scores: top, my_best: my_best, my_scores: my_scores, player: current_player&.username }, status: :created
     end
 
     private
@@ -47,6 +49,13 @@ module Api
       direction = Score::GAME_SORT.fetch(game, :desc)
       score = Score.where(game: game, player: current_player).order(value: direction).first
       score ? { "name" => score.name, "value" => score.value } : nil
+    end
+
+    def my_personal_scores(game)
+      return [] unless current_player
+      direction = Score::GAME_SORT.fetch(game, :desc)
+      Score.where(game: game, player: current_player).order(value: direction).limit(5)
+           .map { |s| { "name" => s.name, "value" => s.value } }
     end
   end
 end

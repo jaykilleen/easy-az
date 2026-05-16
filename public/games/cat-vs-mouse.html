@@ -161,7 +161,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (paused) resumeGame();
     else if (running) pauseGame();
-    else if (!overlay.classList.contains('hidden')) window.location.href = '/';
+    else if (!overlay.classList.contains('hidden')) window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
   } else {
     e.preventDefault();
   }
@@ -189,7 +189,7 @@ function quitGame() {
   running = false;
   paused = false;
   document.getElementById('quitConfirm').classList.add('hidden');
-  window.location.href = '/';
+  window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
 }
 document.getElementById('quitYes').addEventListener('click', quitGame);
 document.getElementById('quitNo').addEventListener('click', resumeGame);
@@ -2093,7 +2093,7 @@ document.getElementById('lbPlayBtn').addEventListener('click', function() {
   if (lbRestartFn) lbRestartFn();
 });
 document.getElementById('lbStoreBtn').addEventListener('click', function() {
-  window.location.href = '/';
+  window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
 });
 
 // Load title screen leaderboard

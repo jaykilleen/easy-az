@@ -274,7 +274,7 @@ document.addEventListener('keydown', function(e) {
   keys[e.code] = true;
   if (e.key === 'Escape') {
     if (gameState === 'title') {
-      window.location.href = '/';
+      window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
     } else if (gameState === 'playing' || gameState === 'countdown') {
       togglePause();
     }
@@ -989,7 +989,7 @@ async function showGameOver() {
     screen.style.display = 'none';
     startGame(playerCount);
   };
-  document.getElementById('quitBtn').onclick = function() { window.location.href = '/'; };
+  document.getElementById('quitBtn').onclick = function() { window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/'); };
   if (document.getElementById('nameInput')) document.getElementById('nameInput').focus();
 }
 
@@ -1018,7 +1018,7 @@ function togglePause() {
   else startBGM();
 }
 function resumeGame() { togglePause(); }
-function quitGame() { window.location.href = '/'; }
+function quitGame() { window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/'); }
 window.resumeGame = resumeGame;
 window.quitGame = quitGame;
 

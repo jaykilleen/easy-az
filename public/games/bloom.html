@@ -1071,7 +1071,7 @@ document.addEventListener('keydown', function (e) {
   }
   // Escape to pause/resume
   if (e.key === 'Escape') {
-    if (state === 'title') window.location.href = '/';
+    if (state === 'title') window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
     else if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
   }

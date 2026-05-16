@@ -902,7 +902,7 @@ function resumeGame() {
 }
 
 function quitGame() {
-  window.location.href = '/';
+  window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/');
 }
 
 function getElapsedTime() {

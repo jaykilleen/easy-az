@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ez-az": {
+      "command": "node",
+      "args": [".claude/mcp/ez-az-server.js"]
+    }
+  }
+}

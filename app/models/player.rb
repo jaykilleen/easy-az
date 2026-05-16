@@ -6,6 +6,8 @@ class Player < ApplicationRecord
 
   has_many :scores
   has_many :memberships, class_name: "RoomMembership"
+  has_many :bug_reports
+  has_many :bug_votes
 
   normalizes :username, with: ->(v) { v.strip.upcase.gsub(/[^A-Z0-9_]/, "").first(16) }
 

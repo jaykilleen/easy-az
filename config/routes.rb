@@ -74,6 +74,12 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :bugs, only: [:index, :create, :update, :destroy] do
+    member do
+      post :vote
+    end
+  end
+
   get "/code",     to: "code#index"
   get "/code/view", to: "code#show"
 

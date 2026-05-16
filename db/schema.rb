@@ -10,7 +10,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_03_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_16_052618) do
+  create_table "bug_reports", force: :cascade do |t|
+    t.text "az_note"
+    t.datetime "created_at", null: false
+    t.text "description", null: false
+    t.string "game_slug"
+    t.integer "player_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.integer "votes_count", default: 0, null: false
+    t.index ["player_id"], name: "index_bug_reports_on_player_id"
+    t.index ["status"], name: "index_bug_reports_on_status"
+  end
+
+  create_table "bug_votes", force: :cascade do |t|
+    t.integer "bug_report_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "player_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bug_report_id", "player_id"], name: "index_bug_votes_on_bug_report_id_and_player_id", unique: true
+  end
+
   create_table "counters", force: :cascade do |t|
     t.string "key", null: false
     t.integer "value", default: 0, null: false

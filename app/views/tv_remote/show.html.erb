@@ -565,6 +565,21 @@
 
   /* watching */
   .watching-hint { color: #8ab4c8; }
+  .guide-remote-btn {
+    margin-top: 20px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    background: rgba(0,255,200,0.1);
+    border: 2px solid rgba(0,255,200,0.4);
+    color: #00ffc8;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s;
+  }
+  .guide-remote-btn:active { background: rgba(0,255,200,0.2); }
 
   /* disconnected */
   .disconnected-title { font-size: 20px; color: #fff; font-weight: 700; }
@@ -1058,6 +1073,9 @@
       <div class="zone-hint watching-hint">
         Game in progress.<br>Use the remote to control.
       </div>
+      <button class="guide-remote-btn" ontouchstart="sendNav('guide','press')" ontouchend="sendNav('guide','release')" onmousedown="sendNav('guide','press')" onmouseup="sendNav('guide','release')">
+        📺 TV Guide
+      </button>
     </div>
 
     <!-- disconnected -->

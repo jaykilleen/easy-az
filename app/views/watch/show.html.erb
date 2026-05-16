@@ -773,6 +773,8 @@
     document.querySelectorAll('.guide-ch').forEach(function(el, i) {
       el.classList.toggle('active', i === trackIdx);
     });
+    var activeGuide = document.querySelector('.guide-ch.active');
+    if (activeGuide) activeGuide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
   function showGuide() {
@@ -831,16 +833,19 @@
 
   function handleNav(dir) {
     if (isGuideOpen()) {
-      if (dir === 'back') closeTvGuide();
+      if (dir === 'back' || dir === 'guide') closeTvGuide();
       return;
     }
+    if (dir === 'guide') { openTvGuide(); return; }
     showHud();
     switch (dir) {
       case 'up':     changeChannel(-1);    break;
       case 'down':   changeChannel(1);     break;
       case 'left':   advanceVideo(-1);     break;
       case 'right':  advanceVideo(1);      break;
-      case 'select': togglePlayPause();    break;
+      case 'select':
+        document.getElementById('guide').classList.contains('visible') ? openTvGuide() : togglePlayPause();
+        break;
       case 'back':   window.location.href = '/'; break;
     }
   }
@@ -858,7 +863,10 @@
       case 'ArrowDown':                    e.preventDefault(); changeChannel(1);  break;
       case 'ArrowLeft':                    e.preventDefault(); advanceVideo(-1);  break;
       case 'ArrowRight':                   e.preventDefault(); advanceVideo(1);   break;
-      case 'Enter': case ' ':              e.preventDefault(); togglePlayPause(); break;
+      case 'Enter': case ' ':
+        e.preventDefault();
+        document.getElementById('guide').classList.contains('visible') ? openTvGuide() : togglePlayPause();
+        break;
       case 'g': case 'G':                  e.preventDefault(); openTvGuide();     break;
       case 'Escape': case 'Backspace':     window.location.href = '/';            break;
     }

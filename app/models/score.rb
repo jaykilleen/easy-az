@@ -14,7 +14,9 @@ class Score < ApplicationRecord
     "hacker-pro" => :asc,
     "boomerang-brawl" => :desc,
     "letterbox" => :desc,
-    "magnet-lab" => :desc
+    "magnet-lab" => :desc,
+    "marble-run" => :asc,
+    "dino-jump"  => :desc
   }.freeze
 
   DEFAULT_NAMES = {

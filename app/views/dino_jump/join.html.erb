@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dino Jump — Controller</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #080810;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .store-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(8,8,16,0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+    }
+    .store-banner a { color: #ffe44d; text-decoration: none; font-weight: 700; }
+
+    .page {
+      padding-top: 44px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; }
+    .screen.active { display: flex; }
+
+    /* ---- Join screen ---- */
+    .join-inner {
+      max-width: 400px;
+      width: 100%;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .game-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: #ffe44d;
+      text-align: center;
+    }
+    .game-sub { font-size: 12px; color: #556; text-align: center; letter-spacing: 0.08em; }
+    .label { font-size: 11px; color: #778; letter-spacing: 0.1em; text-transform: uppercase; }
+    .name-input {
+      width: 100%;
+      background: #13131f;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      outline: none;
+    }
+    .name-input:focus { border-color: #ffe44d; }
+    .name-input::placeholder { color: #334; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: #ffe44d;
+      color: #111;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .error-msg { color: #ff4757; font-size: 12px; text-align: center; min-height: 16px; }
+
+    /* ---- Lobby screen ---- */
+    .lobby-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 20px;
+      padding: 20px;
+    }
+    .char-badge {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      border: 4px solid rgba(255,255,255,0.3);
+    }
+    .char-name-big {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      font-family: 'Courier New', monospace;
+    }
+    .waiting-text { font-size: 13px; color: #556; letter-spacing: 0.08em; text-align: center; }
+
+    /* ---- Controller screen ---- */
+    .controller {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .ctrl-header {
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .ctrl-char { font-size: 14px; font-weight: 700; letter-spacing: 0.1em; }
+    .ctrl-score { font-size: 12px; color: #778; letter-spacing: 0.08em; }
+    .ctrl-buttons {
+      flex: 1;
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+    }
+    .dir-btn {
+      flex: 1;
+      border: none;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+      font-weight: 900;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: filter 0.08s;
+      border: 3px solid rgba(255,255,255,0.15);
+    }
+    .dir-btn:active, .dir-btn.pressed { filter: brightness(1.3); }
+
+    /* ---- Game over screen ---- */
+    .gameover-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 16px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .go-rank { font-size: 60px; font-weight: 900; }
+    .go-score { font-size: 16px; color: #00ffcc; letter-spacing: 0.08em; }
+    .go-name { font-size: 22px; font-weight: 700; letter-spacing: 0.1em; }
+    .btn-outline {
+      padding: 14px 32px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      background: transparent;
+      color: #aaa;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="store-banner"><a href="/">EZ-AZ</a></div>
+
+  <div class="page">
+
+    <!-- JOIN -->
+    <div class="screen active" id="screenJoin">
+      <div class="join-inner">
+        <div class="game-title">DINO JUMP</div>
+        <div class="game-sub">Enter your name to join</div>
+        <span class="label">Your name</span>
+        <input class="name-input" id="nameInput" type="text" maxlength="12"
+               placeholder="ENTER NAME" autocomplete="off" autocorrect="off"
+               autocapitalize="characters" spellcheck="false">
+        <div class="error-msg" id="errorMsg"></div>
+        <button class="btn" id="joinBtn" disabled>JOIN GAME</button>
+      </div>
+    </div>
+
+    <!-- LOBBY (waiting for start) -->
+    <div class="screen" id="screenLobby">
+      <div class="lobby-inner">
+        <div class="game-title">DINO JUMP</div>
+        <div class="char-badge" id="lobbyBadge"></div>
+        <div class="char-name-big" id="lobbyCharName"></div>
+        <div class="waiting-text">Waiting for the host to start...</div>
+      </div>
+    </div>
+
+    <!-- CONTROLLER -->
+    <div class="screen" id="screenPlay">
+      <div class="controller">
+        <div class="ctrl-header">
+          <span class="ctrl-char" id="ctrlCharName"></span>
+          <span class="ctrl-score" id="ctrlScore"></span>
+        </div>
+        <div class="ctrl-buttons">
+          <div class="dir-btn" id="btnLeft" style="background:#1a1a2e;">&#8592;</div>
+          <div class="dir-btn" id="btnRight" style="background:#1a1a2e;">&#8594;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="screen" id="screenOver">
+      <div class="gameover-inner">
+        <div class="game-title">DINO JUMP</div>
+        <div class="go-rank" id="goRank"></div>
+        <div class="go-name" id="goName"></div>
+        <div class="go-score" id="goScore"></div>
+        <a href="/" class="btn-outline">BACK TO STORE</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+  (function () {
+    var CHARS = [
+      { name: 'SLATE', colour: '#a0a0a0', emoji: '🦕', bg: '#1a1510' },
+      { name: 'PIXEL', colour: '#00ffcc', emoji: '🦎', bg: '#04090f' },
+      { name: 'FERN',  colour: '#44cc66', emoji: '🦖', bg: '#041008' },
+      { name: 'ECHO',  colour: '#aa88ff', emoji: '🦇', bg: '#080410' }
+    ];
+
+    var code   = new URLSearchParams(location.search).get('code') || '';
+    var mySlot = null;
+    var myName = null;
+    var myChar = null;
+
+    // ---- Screens ----
+    var screens = ['Join', 'Lobby', 'Play', 'Over'];
+    function showScreen(name) {
+      screens.forEach(function(s) {
+        document.getElementById('screen' + s).classList.remove('active');
+      });
+      document.getElementById('screen' + name).classList.add('active');
+    }
+
+    // ---- Name input ----
+    var nameInput = document.getElementById('nameInput');
+    var joinBtn   = document.getElementById('joinBtn');
+    var errorMsg  = document.getElementById('errorMsg');
+
+    nameInput.addEventListener('input', function() {
+      nameInput.value = nameInput.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+      joinBtn.disabled = !nameInput.value.trim();
+    });
+
+    joinBtn.addEventListener('click', function() {
+      var name = nameInput.value.trim();
+      if (!name || !sub) return;
+      errorMsg.textContent = '';
+      sub.send('join', { name: name });
+    });
+
+    // ---- Direction buttons ----
+    var holding = { left: false, right: false };
+
+    function sendDir() {
+      var dir = (holding.left && !holding.right) ? 'left' :
+                (holding.right && !holding.left) ? 'right' : 'none';
+      if (sub) sub.send('input', { dir: dir });
+    }
+
+    function attachDir(elId, dir) {
+      var el = document.getElementById(elId);
+      el.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        el.classList.add('pressed');
+        holding[dir] = true;
+        sendDir();
+      }, { passive: false });
+      el.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        el.classList.remove('pressed');
+        holding[dir] = false;
+        sendDir();
+      }, { passive: false });
+      el.addEventListener('touchcancel', function() {
+        el.classList.remove('pressed');
+        holding[dir] = false;
+        sendDir();
+      });
+      // Mouse fallback for desktop testing
+      el.addEventListener('mousedown', function() { holding[dir] = true; sendDir(); });
+      el.addEventListener('mouseup',   function() { holding[dir] = false; sendDir(); });
+    }
+
+    attachDir('btnLeft',  'left');
+    attachDir('btnRight', 'right');
+
+    // ---- Apply character theme ----
+    function applyChar(slot) {
+      myChar = CHARS[slot];
+      document.getElementById('lobbyBadge').textContent = myChar.emoji;
+      document.getElementById('lobbyBadge').style.background = myChar.bg;
+      document.getElementById('lobbyBadge').style.border = '4px solid ' + myChar.colour;
+      document.getElementById('lobbyCharName').textContent = myChar.name;
+      document.getElementById('lobbyCharName').style.color = myChar.colour;
+      document.getElementById('ctrlCharName').textContent = myChar.name;
+      document.getElementById('ctrlCharName').style.color = myChar.colour;
+      document.getElementById('btnLeft').style.background = myChar.bg;
+      document.getElementById('btnRight').style.background = myChar.bg;
+      document.getElementById('btnLeft').style.color = myChar.colour;
+      document.getElementById('btnRight').style.color = myChar.colour;
+      document.getElementById('btnLeft').style.borderColor = myChar.colour;
+      document.getElementById('btnRight').style.borderColor = myChar.colour;
+      document.body.style.background = myChar.bg;
+    }
+
+    // ---- AzCable (same pattern as Marble Run) ----
+    var wsBase = window.location.origin.replace(/^http/, 'ws') + '/cable';
+
+    function AzCable() {
+      this._subs = []; this._ws = null; this._connect();
+    }
+    AzCable.prototype._connect = function() {
+      var self = this;
+      this._ws = new WebSocket(wsBase);
+      this._ws.onopen = function() { self._subs.forEach(function(s) { s._subscribe(); }); };
+      this._ws.onmessage = function(e) {
+        var msg = JSON.parse(e.data);
+        if (msg.type === 'ping' || msg.type === 'welcome' || msg.type === 'confirm_subscription') return;
+        var id = msg.identifier;
+        self._subs.forEach(function(s) { if (s._id === id && msg.message) s._received(msg.message); });
+      };
+      this._ws.onclose = function() { setTimeout(function() { self._connect(); }, 2000); };
+    };
+    AzCable.prototype.subscribe = function(params, handlers) {
+      var s = new AzSub(this, params, handlers);
+      this._subs.push(s);
+      if (this._ws && this._ws.readyState === WebSocket.OPEN) s._subscribe();
+      return s;
+    };
+    AzCable.prototype._send = function(d) {
+      if (this._ws && this._ws.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(d));
+    };
+
+    function AzSub(cable, params, handlers) {
+      this._cable = cable; this._params = params;
+      this._id = JSON.stringify(params); this._handlers = handlers;
+    }
+    AzSub.prototype._subscribe = function() { this._cable._send({ command: 'subscribe', identifier: this._id }); };
+    AzSub.prototype._received = function(msg) { if (this._handlers.received) this._handlers.received(msg); };
+    AzSub.prototype.send = function(action, data) {
+      this._cable._send({ command: 'message', identifier: this._id,
+        data: JSON.stringify(Object.assign({ action: action }, data || {})) });
+    };
+
+    var cable = new AzCable();
+    var sub = cable.subscribe(
+      { channel: 'DinoJumpChannel', code: code, role: 'phone' },
+      { received: onMessage }
+    );
+
+    function onMessage(msg) {
+      switch (msg.type) {
+        case 'joined':
+          mySlot = msg.slot;
+          myName = msg.name;
+          applyChar(mySlot);
+          showScreen('Lobby');
+          break;
+
+        case 'join_error':
+          errorMsg.textContent = msg.message || 'Could not join.';
+          break;
+
+        case 'game_started':
+          if (mySlot !== null) showScreen('Play');
+          break;
+
+        case 'score_update':
+          if (msg.slot === mySlot) {
+            document.getElementById('ctrlScore').textContent = msg.score + ' ALT';
+          }
+          break;
+
+        case 'game_over':
+          if (mySlot === null) break;
+          var results = msg.results || [];
+          var mine = results.find(function(r) { return r.slot === mySlot; });
+          var rank = results.findIndex(function(r) { return r.slot === mySlot; });
+          if (mine) {
+            var ordinals = ['1ST', '2ND', '3RD', '4TH'];
+            document.getElementById('goRank').textContent = ordinals[rank] || (rank + 1) + 'TH';
+            document.getElementById('goRank').style.color = myChar ? myChar.colour : '#fff';
+            document.getElementById('goName').textContent = myName || '';
+            document.getElementById('goScore').textContent = mine.score + ' ALT';
+          }
+          showScreen('Over');
+          break;
+      }
+    }
+
+    if (!code) {
+      document.getElementById('errorMsg').textContent = 'No game code. Ask the TV for the join link.';
+      joinBtn.disabled = true;
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -202,12 +202,12 @@ Zone Screen states: `claim` · `shelf` · `lobby` · `waiting` · `buzzer` · `w
 - ADRs live in `docs/decisions/` -- read before touching TV, rooms, or player identity
 - API controllers live under `app/controllers/api/` and inherit from `Api::BaseController`
 - Game slugs must be registered in `config.ru` (`GAME_SORT` and `DEFAULT_NAMES` hashes)
-- Dev server runs on port 3001 (port 3000 is reserved for TXTavern)
+- Dev server runs on port 5001 (port 3000 is reserved for TXTavern)
 - No Turbo, no Stimulus -- this is not a standard Rails app; the frontend is vanilla JS and Canvas
 
 ## Development
 
-Start the server: `bin/rails server -p 3001`
+Start the server: `bin/rails server -p 5001`
 
 Games live in `public/games/`. The store front is `public/index.html`. Game files are self-contained with no external dependencies.
 

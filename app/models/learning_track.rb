@@ -49,14 +49,10 @@ class LearningTrack
       colour:      "#ff6ec7",
       description: "Why do games feel fun? Design theory from the people who make them.",
       videos: [
-        { title: "What Makes a Good Puzzle?",                youtube_id: "zsjC6fa_YBg", note: "Game Maker's Toolkit", duration_s: 720 },
-        { title: "How Celeste Teaches You Its Mechanics",    youtube_id: "lZoQ9a7oPY8", note: "Game Maker's Toolkit", duration_s: 600 },
-        { title: "Why Does Celeste Feel So Good to Play?",   youtube_id: "yorTG9at90g", note: "Game Maker's Toolkit", duration_s: 540 },
-        { title: "How Games Use Feedback Loops",             youtube_id: "H4kbJObhcHo", note: "Game Maker's Toolkit", duration_s: 720 },
-        { title: "What Makes a Satisfying Ending?",          youtube_id: "fce_HKGMcKI", note: "Game Maker's Toolkit", duration_s: 660 },
-        { title: "The Theory of Fun",                        youtube_id: "6cBN8AjJt4E", note: "GDC",                  duration_s: 3300 },
-        { title: "Juice it or Lose it",                      youtube_id: "Fy0aCDmgnxg", note: "GDC",                  duration_s: 1500 },
-        { title: "How to make your game feel great",         youtube_id: "AJdEqssNZ-U", note: "GDC",                  duration_s: 2100 },
+        { title: "What Makes a Good Puzzle?",              youtube_id: "zsjC6fa_YBg", note: "Game Maker's Toolkit", duration_s: 720 },
+        { title: "Why Does Celeste Feel So Good to Play?", youtube_id: "yorTG9at90g", note: "Game Maker's Toolkit", duration_s: 540 },
+        { title: "Juice it or Lose it",                    youtube_id: "Fy0aCDmgnxg", note: "GDC",                  duration_s: 1500 },
+        { title: "How to make your game feel great",       youtube_id: "AJdEqssNZ-U", note: "GDC",                  duration_s: 2100 },
       ]
     },
     {
@@ -66,8 +62,6 @@ class LearningTrack
       colour:      "#4aaeff",
       description: "From punch cards to AI — the wild story of how computing got here.",
       videos: [
-        { title: "Early Computing",                  youtube_id: "O5nskjLSe40", note: "Crash Course CS #1",  duration_s: 720 },
-        { title: "Electronic Computing",             youtube_id: "LN0Da53lKlM", note: "Crash Course CS #2",  duration_s: 720 },
         { title: "Boolean Logic & Logic Gates",      youtube_id: "gI-qXk7XojA", note: "Crash Course CS #3",  duration_s: 660 },
         { title: "Representing Numbers & Letters",   youtube_id: "1GSjbWt0c9M", note: "Crash Course CS #4",  duration_s: 660 },
         { title: "How Computers Calculate — the ALU", youtube_id: "1I5ZMmrOfnA", note: "Crash Course CS #5", duration_s: 660 },
@@ -85,7 +79,6 @@ class LearningTrack
       colour:      "#ff8c42",
       description: "The science and engineering behind everyday technology.",
       videos: [
-        { title: "How does your phone know where you are?",  youtube_id: "aY8pLSuQeuw", note: "Kurzgesagt",          duration_s: 660 },
         { title: "How does WiFi work?",                      youtube_id: "hePLDVbULZc", note: "Kurzgesagt",          duration_s: 600 },
         { title: "How does the Internet work?",              youtube_id: "x3c1ih2NJEg", note: "Kurzgesagt",          duration_s: 660 },
         { title: "The Quantum World",                        youtube_id: "JhHMJCUmq28", note: "Kurzgesagt",          duration_s: 540 },
@@ -103,9 +96,65 @@ class LearningTrack
         { title: "The Size of the Universe",                       youtube_id: "GoW8Tf7hTGA", note: "Kurzgesagt",  duration_s: 540 },
         { title: "How to Understand the Image of a Black Hole",    youtube_id: "zUyH3XhpLTo", note: "Veritasium",  duration_s: 1080 },
         { title: "Why the Universe is Way Bigger Than You Think",  youtube_id: "Iy7NzjCmUf0", note: "Kurzgesagt",  duration_s: 540 },
-        { title: "How We're Going Back to the Moon",               youtube_id: "JFBGR0l2VoI", note: "Veritasium",  duration_s: 1320 },
-        { title: "What Does Space Smell Like?",                    youtube_id: "8B9KMgBFBpM", note: "Veritasium",  duration_s: 720 },
       ]
+    },
+    {
+      slug:        "world-around-us",
+      title:       "The World Around Us",
+      emoji:       "🌍",
+      colour:      "#4caf50",
+      description: "Wildlife, plants, ecosystems — and how to grow things yourself.",
+      videos: [
+        { title: "How Wolves Change Rivers",       youtube_id: "ysa5OBhXz-Q", note: "Sustainable Man", duration_s: 270 },
+        { title: "Why Elephants Don't Get Cancer", youtube_id: "1AElONvi9WQ", note: "SciShow",         duration_s: 420 },
+      ]
+    },
+    {
+      slug:        "science-experiments",
+      title:       "Science Experiments",
+      emoji:       "🔬",
+      colour:      "#7c3aed",
+      description: "Real experiments, surprising results, and the science behind them.",
+      videos: [
+        { title: "What is NOT Random?",              youtube_id: "sMb00lz-IfE", note: "Veritasium", duration_s: 780 },
+        { title: "The Science of Thinking",          youtube_id: "UBVV8pch1dM", note: "Veritasium", duration_s: 720 },
+        { title: "The Most Radioactive Places on Earth", youtube_id: "TRL7o2kPqw0", note: "Veritasium", duration_s: 960 },
+        { title: "World's Roundest Object",          youtube_id: "ZMByI4s-D-Y", note: "Veritasium", duration_s: 600 },
+      ]
+    },
+    {
+      slug:        "how-its-made",
+      title:       "How It's Made",
+      emoji:       "🏭",
+      colour:      "#94a3b8",
+      description: "Factories, engineering, and the processes behind everyday objects.",
+      videos: [
+        { title: "How Power Grids Work",    youtube_id: "v1BMWczn7JM", note: "Practical Engineering", duration_s: 780 },
+        { title: "How Bridges Are Built",   youtube_id: "oVOnRPefcno", note: "Practical Engineering", duration_s: 840 },
+        { title: "Engineering with Origami", youtube_id: "ThwuT3_AG6w", note: "Veritasium",           duration_s: 780 },
+      ]
+    },
+    {
+      slug:        "make-something",
+      title:       "Make Something",
+      emoji:       "🔧",
+      colour:      "#f97316",
+      description: "3D printing, electronics, robots, and building things with your hands.",
+      videos: [
+        { title: "Marble Machine",                  youtube_id: "IvUU8joBb1Q", note: "Wintergatan",   duration_s: 240 },
+        { title: "How to solder properly",          youtube_id: "Qps9woUGkvI", note: "Pace",          duration_s: 900 },
+        { title: "3D Printing for absolute beginners", youtube_id: "nb-Bzf4nQdE", note: "Teaching Tech", duration_s: 780 },
+        { title: "Arduino in 100 seconds",          youtube_id: "1ENiVwk8idM", note: "Fireship",      duration_s: 120 },
+      ]
+    },
+    {
+      slug:        "world-wonders",
+      title:       "World Wonders",
+      emoji:       "🏺",
+      colour:      "#f59e0b",
+      description: "Ancient civilisations, lost cities, and the strangest places on Earth.",
+      # TODO: needs video curation — all initial IDs failed verification
+      videos: []
     },
   ].freeze
 

@@ -5,8 +5,9 @@ class WatchController < ApplicationController
   layout false
 
   def show
-    @tracks  = LearningTrack.all
-    @version = EzAz::Version::STRING
+    @tracks         = LearningTrack.all
+    @version        = EzAz::Version::STRING
+    @holiday_ranges = StoreHours::HOLIDAYS
 
     token  = params[:t].to_s.upcase.gsub(/[^A-Z0-9]/, "")[0, 8]
     @room  = Room.active.find_by(tv_token: token) if token.present?

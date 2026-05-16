@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Marble Run — Join</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a12;
+      --surface: #13131f;
+      --border: rgba(255,255,255,0.08);
+      --teal: #00ffc8;
+      --gold: #ffd700;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+      overflow-x: hidden;
+    }
+
+    .store-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,10,18,0.92);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+    }
+    .store-banner a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .page {
+      padding-top: 48px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ---- Screen panels ---- */
+    .screen {
+      width: 100%;
+      max-width: 440px;
+      padding: 20px 16px 32px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .screen.active { display: flex; }
+
+    /* ---- Game title ---- */
+    .game-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      background: linear-gradient(135deg, #00d2ff, #a855f7, #ff6b9d);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .game-sub {
+      font-size: 12px;
+      color: #667;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    /* ---- Name input ---- */
+    .label {
+      font-size: 11px;
+      color: #778;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      align-self: flex-start;
+    }
+    .name-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .name-input:focus { border-color: var(--teal); }
+    .name-input::placeholder { color: #334; }
+
+    /* ---- Colour grid ---- */
+    .colour-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      width: 100%;
+    }
+    .colour-cell {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .colour-cell:hover:not(.claimed) { transform: scale(1.1); }
+    .colour-cell.selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+      transform: scale(1.15);
+    }
+    .colour-cell.claimed {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .colour-cell.claimed::after {
+      content: attr(data-taker);
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      padding: 2px;
+      word-break: break-all;
+      line-height: 1.1;
+      /* can't use display:flex on ::after directly; use the trick below */
+    }
+
+    /* ---- Join button ---- */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, #00d2ff, #a855f7);
+      color: #fff;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error-msg {
+      color: #ff4757;
+      font-size: 12px;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    /* ---- Marble display (big) ---- */
+    .marble-big {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .marble-big::after {
+      content: '';
+      position: absolute;
+      top: 16%;
+      left: 22%;
+      width: 30%;
+      height: 22%;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      transform: rotate(-30deg);
+    }
+
+    /* ---- Status text ---- */
+    .status-text {
+      font-size: 14px;
+      color: #778;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+    .status-big {
+      font-size: 52px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .status-label {
+      font-size: 11px;
+      color: #556;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ---- Position display ---- */
+    .position-ordinal {
+      font-size: 72px;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1;
+    }
+    .points-earned {
+      font-size: 16px;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+    .gem-notice {
+      font-size: 13px;
+      color: var(--gold);
+      text-align: center;
+    }
+
+    /* ---- Series table ---- */
+    .series-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .series-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .series-table tr.mine td { background: rgba(255,255,255,0.04); }
+    .dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    .rank-num {
+      color: #556;
+      font-size: 12px;
+      min-width: 24px;
+      display: inline-block;
+    }
+    .pts-cell {
+      text-align: right;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    /* ---- Winner display ---- */
+    .winner-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .winner-name {
+      font-size: 38px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    /* ---- Pulse animation ---- */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+    .pulsing { animation: pulse 1.2s ease-in-out infinite; }
+    .nudge-btn {
+      margin-top: 28px;
+      padding: 18px 48px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1.1rem;
+      background: #ff6b35;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255,107,53,0.6);
+      letter-spacing: 2px;
+      transition: transform 0.08s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nudge-btn:active { transform: scale(0.92); }
+    .nudge-btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+    .nudge-cooldown {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #556;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="store-banner"><a href="/">EZ-AZ</a></div>
+
+  <div class="page">
+
+    <!-- UNJOINED: name + colour picker -->
+    <div class="screen active" id="screenUnjoined">
+      <div class="game-title">MARBLE RUN</div>
+      <div class="game-sub">Pick your marble</div>
+
+      <span class="label">Your name</span>
+      <input class="name-input" id="nameInput" type="text" maxlength="12" placeholder="ENTER NAME" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+
+      <span class="label">Choose a colour</span>
+      <div class="colour-grid" id="colourGrid"></div>
+
+      <div class="error-msg" id="errorMsg"></div>
+      <button class="btn btn-primary" id="joinBtn" disabled>JOIN RACE</button>
+    </div>
+
+    <!-- JOINED LOBBY -->
+    <div class="screen" id="screenLobby">
+      <div class="game-title">MARBLE RUN</div>
+      <div id="lobbyMarble" class="marble-big pulsing"></div>
+      <div id="lobbyName" class="status-text" style="font-size:22px;font-weight:700;color:#fff;"></div>
+      <div class="status-text">Waiting for the host to start...</div>
+    </div>
+
+    <!-- RACING -->
+    <div class="screen" id="screenRacing">
+      <div class="game-title">MARBLE RUN</div>
+      <div id="racingMarble" class="marble-big pulsing"></div>
+      <div class="status-label">RACING</div>
+      <button id="nudgeBtn" class="nudge-btn" onclick="doNudge()">HOP!</button>
+      <div id="nudgeCooldown" class="nudge-cooldown" style="display:none"></div>
+    </div>
+
+    <!-- FINISHED (individual result before race_over) -->
+    <div class="screen" id="screenFinished">
+      <div class="game-title">MARBLE RUN</div>
+      <div id="finishMarble" class="marble-big"></div>
+      <div id="finishOrdinal" class="position-ordinal"></div>
+      <div id="finishPts" class="points-earned"></div>
+      <div id="finishGem" class="gem-notice" style="display:none">You got the gem! +1 bonus</div>
+      <div class="status-text">Waiting for others to finish...</div>
+    </div>
+
+    <!-- RESULTS (race over) -->
+    <div class="screen" id="screenResults">
+      <div id="resultsHeader" class="status-label"></div>
+      <table class="series-table" id="resultsTable"></table>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="screen" id="screenGameOver">
+      <div class="game-title">GAME OVER</div>
+      <div id="goWinnerLabel" class="winner-label">WINNER</div>
+      <div id="goWinnerMarble" class="marble-big" style="margin: 0 auto;"></div>
+      <div id="goWinnerName" class="winner-name"></div>
+      <div class="status-label" style="margin-top:4px;">FINAL STANDINGS</div>
+      <table class="series-table" id="goTable"></table>
+      <a href="/" class="btn btn-primary" style="text-align:center;text-decoration:none;padding:16px;display:block;">BACK TO STORE</a>
+    </div>
+
+  </div>
+
+  <script>
+  (function () {
+
+    // ---- Marble colours (must match channel) ----
+    var MARBLE_COLORS = {
+      red: '#ff4757', blue: '#3742fa', orange: '#ff6b35', green: '#2ed573',
+      purple: '#a855f7', yellow: '#ffd700', pink: '#ff6b9d', cyan: '#00d2ff',
+      white: '#f0f0f0', lime: '#b5ff4d', coral: '#ff7f50', teal: '#00b894',
+      magenta: '#ff00ff', gold: '#ffc200', rose: '#ff0055', sky: '#87ceeb',
+      mint: '#98ffda', amber: '#ffbf00', lavender: '#b57bee', silver: '#c0c0c0'
+    };
+
+    var COLOR_ORDER = Object.keys(MARBLE_COLORS);
+
+    // ---- State ----
+    var code = new URLSearchParams(location.search).get('code') || '';
+    var myColor = null;       // color key e.g. 'red'
+    var myColorHex = null;
+    var myName = null;
+    var claimedColors = {};   // colorKey -> takerName
+
+    // ---- DOM ----
+    var nameInput   = document.getElementById('nameInput');
+    var colourGrid  = document.getElementById('colourGrid');
+    var joinBtn     = document.getElementById('joinBtn');
+    var errorMsg    = document.getElementById('errorMsg');
+
+    // ---- Build colour grid ----
+    COLOR_ORDER.forEach(function (key) {
+      var cell = document.createElement('div');
+      cell.className = 'colour-cell';
+      cell.id = 'colour-' + key;
+      cell.style.background = marbleGradient(MARBLE_COLORS[key]);
+      cell.dataset.key = key;
+      cell.title = key;
+      cell.addEventListener('click', function () {
+        if (cell.classList.contains('claimed')) return;
+        document.querySelectorAll('.colour-cell.selected').forEach(function (c) { c.classList.remove('selected'); });
+        cell.classList.add('selected');
+        updateJoinBtn();
+      });
+      colourGrid.appendChild(cell);
+    });
+
+    function marbleGradient(hex) {
+      return 'radial-gradient(circle at 35% 35%, ' + lighten(hex) + ' 0%, ' + hex + ' 60%, ' + darken(hex) + ' 100%)';
+    }
+    function lighten(hex) { return blendHex(hex, '#ffffff', 0.35); }
+    function darken(hex)  { return blendHex(hex, '#000000', 0.4); }
+    function blendHex(hex, other, t) {
+      var a = parseHex(hex), b = parseHex(other);
+      var r = Math.round(a[0] + (b[0]-a[0])*t);
+      var g = Math.round(a[1] + (b[1]-a[1])*t);
+      var bl = Math.round(a[2] + (b[2]-a[2])*t);
+      return 'rgb('+r+','+g+','+bl+')';
+    }
+    function parseHex(hex) {
+      hex = hex.replace('#','');
+      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+    }
+
+    function selectedColor() {
+      var sel = document.querySelector('.colour-cell.selected');
+      return sel ? sel.dataset.key : null;
+    }
+
+    function updateJoinBtn() {
+      joinBtn.disabled = !(nameInput.value.trim() && selectedColor());
+    }
+
+    nameInput.addEventListener('input', updateJoinBtn);
+    nameInput.addEventListener('input', function () {
+      nameInput.value = nameInput.value.toUpperCase().replace(/[^A-Z0-9 ]/g,'');
+    });
+
+    // ---- Screen management ----
+    var screens = {
+      unjoined:  document.getElementById('screenUnjoined'),
+      lobby:     document.getElementById('screenLobby'),
+      racing:    document.getElementById('screenRacing'),
+      finished:  document.getElementById('screenFinished'),
+      results:   document.getElementById('screenResults'),
+      gameOver:  document.getElementById('screenGameOver')
+    };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(function (s) { s.classList.remove('active'); });
+      if (screens[name]) screens[name].classList.add('active');
+    }
+
+    // ---- Nudge / hop ----
+    var nudgeCooling = false;
+    function doNudge() {
+      if (nudgeCooling || !sub) return;
+      sub.send('nudge', {});
+      nudgeCooling = true;
+      var btn = document.getElementById('nudgeBtn');
+      var cd  = document.getElementById('nudgeCooldown');
+      btn.disabled = true;
+      cd.style.display = 'block';
+      var secs = 8;
+      cd.textContent = 'Cooldown: ' + secs + 's';
+      var t = setInterval(function () {
+        secs--;
+        if (secs <= 0) {
+          clearInterval(t);
+          btn.disabled = false;
+          cd.style.display = 'none';
+          nudgeCooling = false;
+        } else {
+          cd.textContent = 'Cooldown: ' + secs + 's';
+        }
+      }, 1000);
+    }
+
+    // ---- Marble rendering helpers ----
+    function setMarble(el, colorHex) {
+      el.style.background = marbleGradient(colorHex);
+    }
+
+    function ordinal(n) {
+      var s = ['th','st','nd','rd'];
+      var v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]) + '!';
+    }
+
+    // ---- Apply lobby update ----
+    function applyLobbyUpdate(players) {
+      // Reset all cells
+      COLOR_ORDER.forEach(function (key) {
+        var cell = document.getElementById('colour-' + key);
+        if (!cell) return;
+        cell.classList.remove('claimed');
+        delete cell.dataset.taker;
+        cell.style.opacity = '';
+        cell.style.cursor = '';
+      });
+      claimedColors = {};
+
+      players.forEach(function (p) {
+        claimedColors[p.color] = p.name;
+        var cell = document.getElementById('colour-' + p.color);
+        if (!cell) return;
+        // Don't mark my own colour as claimed
+        if (p.color === myColor) return;
+        cell.classList.add('claimed');
+        cell.dataset.taker = p.name.slice(0,5);
+      });
+    }
+
+    // ---- Results table ----
+    function buildSeriesTable(tableEl, scores, isGameOver) {
+      tableEl.innerHTML = '';
+      scores.forEach(function (s, i) {
+        var tr = document.createElement('tr');
+        if (s.color === myColor) tr.className = 'mine';
+        var rankTd = document.createElement('td');
+        rankTd.innerHTML = '<span class="rank-num">' + (i+1) + '.</span>';
+        var nameTd = document.createElement('td');
+        nameTd.innerHTML = '<span class="dot" style="background:' + s.color_hex + '"></span>' + s.name;
+        var ptsTd = document.createElement('td');
+        ptsTd.className = 'pts-cell';
+        ptsTd.textContent = s.points + ' pts';
+        tr.appendChild(rankTd);
+        tr.appendChild(nameTd);
+        tr.appendChild(ptsTd);
+        tableEl.appendChild(tr);
+      });
+    }
+
+    // ---- ActionCable minimal client ----
+    var wsBase = window.location.origin.replace(/^http/, 'ws') + '/cable';
+
+    function AzCable() {
+      this._subs = [];
+      this._ws = null;
+      this._connect();
+    }
+
+    AzCable.prototype._connect = function () {
+      var self = this;
+      this._ws = new WebSocket(wsBase);
+
+      this._ws.onopen = function () {
+        self._subs.forEach(function (sub) { sub._subscribe(); });
+      };
+
+      this._ws.onmessage = function (e) {
+        var msg = JSON.parse(e.data);
+        if (msg.type === 'ping') return;
+        if (msg.type === 'welcome') return;
+        if (msg.type === 'confirm_subscription') return;
+        var id = msg.identifier;
+        self._subs.forEach(function (sub) {
+          if (sub._id === id && msg.message) sub._received(msg.message);
+        });
+      };
+
+      this._ws.onclose = function () {
+        setTimeout(function () { self._connect(); }, 2000);
+      };
+    };
+
+    AzCable.prototype.subscribe = function (params, handlers) {
+      var sub = new AzSub(this, params, handlers);
+      this._subs.push(sub);
+      if (this._ws && this._ws.readyState === WebSocket.OPEN) sub._subscribe();
+      return sub;
+    };
+
+    AzCable.prototype._send = function (data) {
+      if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+        this._ws.send(JSON.stringify(data));
+      }
+    };
+
+    function AzSub(cable, params, handlers) {
+      this._cable    = cable;
+      this._params   = params;
+      this._id       = JSON.stringify(params);
+      this._handlers = handlers;
+    }
+
+    AzSub.prototype._subscribe = function () {
+      this._cable._send({ command: 'subscribe', identifier: this._id });
+    };
+
+    AzSub.prototype._received = function (msg) {
+      if (this._handlers.received) this._handlers.received(msg);
+    };
+
+    AzSub.prototype.send = function (action, data) {
+      this._cable._send({
+        command:    'message',
+        identifier: this._id,
+        data:       JSON.stringify(Object.assign({ action: action }, data || {}))
+      });
+    };
+
+    // ---- Connect ----
+    var cable = new AzCable();
+    var sub = cable.subscribe(
+      { channel: 'MarbleRunChannel', code: code, role: 'phone' },
+      { received: onMessage }
+    );
+
+    function onMessage(msg) {
+      switch (msg.type) {
+
+        case 'state':
+          if (msg.phase === 'lobby' && !myColor) {
+            applyLobbyUpdate(msg.players || []);
+          }
+          break;
+
+        case 'lobby_update':
+          applyLobbyUpdate(msg.players || []);
+          break;
+
+        case 'joined':
+          myColor    = msg.color;
+          myColorHex = msg.color_hex;
+          myName     = msg.name;
+          setMarble(document.getElementById('lobbyMarble'), myColorHex);
+          setMarble(document.getElementById('racingMarble'), myColorHex);
+          setMarble(document.getElementById('finishMarble'), myColorHex);
+          document.getElementById('lobbyName').textContent = myName;
+          showScreen('lobby');
+          break;
+
+        case 'join_error':
+          errorMsg.textContent = msg.message || 'Could not join.';
+          break;
+
+        case 'series_starting':
+          if (myColor) showScreen('racing');
+          break;
+
+        case 'race_started':
+          if (myColor) showScreen('racing');
+          break;
+
+        case 'marble_finished':
+          if (msg.color === myColor) {
+            document.getElementById('finishOrdinal').textContent = ordinal(msg.position);
+            // We don't yet know points — show placeholder
+            document.getElementById('finishPts').textContent = '';
+            document.getElementById('finishGem').style.display = 'none';
+            showScreen('finished');
+          }
+          break;
+
+        case 'gem_collected':
+          if (msg.color === myColor && myColor) {
+            document.getElementById('finishGem').style.display = '';
+          }
+          break;
+
+        case 'race_over':
+          var myResult = (msg.results || []).find(function (r) { return r.color === myColor; });
+          if (myResult) {
+            document.getElementById('finishPts').textContent = '+' + myResult.points_earned + ' pts';
+            if (msg.gem_winner === myColor) {
+              document.getElementById('finishGem').style.display = '';
+            }
+          }
+          var header = document.getElementById('resultsHeader');
+          header.textContent = 'RACE ' + msg.race + ' OF ' + msg.race_count;
+          buildSeriesTable(document.getElementById('resultsTable'), msg.scores || [], false);
+          showScreen('results');
+          break;
+
+        case 'next_countdown':
+          buildSeriesTable(document.getElementById('resultsTable'), msg.scores || [], false);
+          if (myColor) showScreen('racing');
+          break;
+
+        case 'game_over':
+          var goWinner = msg.winner;
+          if (goWinner) {
+            setMarble(document.getElementById('goWinnerMarble'), goWinner.color_hex);
+            document.getElementById('goWinnerName').textContent = goWinner.name;
+            document.getElementById('goWinnerName').style.color = goWinner.color_hex;
+          }
+          buildSeriesTable(document.getElementById('goTable'), msg.scores || [], true);
+          showScreen('gameOver');
+          break;
+      }
+    }
+
+    // ---- Join button ----
+    joinBtn.addEventListener('click', function () {
+      var name  = nameInput.value.trim();
+      var color = selectedColor();
+      if (!name || !color) return;
+      errorMsg.textContent = '';
+      sub.send('join', { name: name, color: color });
+    });
+
+    // ---- Show error if no code ----
+    if (!code) {
+      errorMsg.textContent = 'No game code in URL. Ask the TV host for the join link.';
+    }
+
+  })();
+  </script>
+</body>
+</html>

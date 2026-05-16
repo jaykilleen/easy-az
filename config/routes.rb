@@ -24,6 +24,11 @@ Rails.application.routes.draw do
   get  "/games/boomerang-brawl",       to: "boomerang#new",  as: :new_boomerang
   get  "/games/boomerang-brawl/:code", to: "boomerang#show", as: :boomerang
 
+  get '/games/marble-run', to: 'marble_run#tv'
+  get '/marble-run/join',  to: 'marble_run#join'
+
+  get '/dino-jump/join', to: 'dino_jump#join'
+
   resources :rooms, only: [:new, :create, :show], param: :code do
     member do
       get  :join,     action: :join

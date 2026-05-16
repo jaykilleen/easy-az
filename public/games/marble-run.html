@@ -535,9 +535,10 @@
           m.flashFrames = 14;  // bright flash on arrival
           m.transitioning = null;
           playGateExit();
+        } else {
+          // While waiting: keep marble hidden at gate position
+          m.y = GATE_Y + 999;  // move off-screen during flash delay
         }
-        // While waiting: keep marble hidden at gate position
-        m.y = GATE_Y + 999;  // move off-screen during flash delay
       }
 
       // Physics substep

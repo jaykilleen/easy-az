@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marble Run — EZ-AZ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #050a12;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0; left: 0;
+    }
+    .store-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      background: rgba(5,10,18,0.85);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 8px 16px;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+    }
+    .store-banner a {
+      color: #ffd700;
+      text-decoration: none;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="store-banner"><a href="/">EZ-AZ</a></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ---- Canvas setup ----
+    var canvas = document.getElementById('gameCanvas');
+    var ctx    = canvas.getContext('2d');
+    var W, H, BANNER_H = 30;
+
+    // ---- Physics constants ----
+    var GRAVITY          = 0.15;   // px per fixed step (60 steps/s)
+    var PEG_RESTITUTION  = 0.62;   // bouncy off pegs
+    var MM_RESTITUTION   = 0.50;   // marble vs marble
+    var DRAG             = 0.9985; // per-step air drag
+
+    // Fixed-timestep accumulator (inlined from MainLoop.js concept)
+    var FIXED_DT  = 1000 / 60;
+    var accumulator = 0;
+    var lastTs      = null;
+
+    // ---- Game code ----
+    var CHARS = 'BCDFGHJKLMNPQRSTVWXYZ23456789';
+    var gameCode = Array.from({length: 4}, function () {
+      return CHARS[Math.floor(Math.random() * CHARS.length)];
+    }).join('');
+
+    // ---- Marble colours ----
+    var MARBLE_COLORS = {
+      red: '#ff4757', blue: '#3742fa', orange: '#ff6b35', green: '#2ed573',
+      purple: '#a855f7', yellow: '#ffd700', pink: '#ff6b9d', cyan: '#00d2ff',
+      white: '#f0f0f0', lime: '#b5ff4d', coral: '#ff7f50', teal: '#00b894',
+      magenta: '#ff00ff', gold: '#ffc200', rose: '#ff0055', sky: '#87ceeb',
+      mint: '#98ffda', amber: '#ffbf00', lavender: '#b57bee', silver: '#c0c0c0'
+    };
+
+    var NCOLS  = 5;
+    var COL_W  = 0;   // W / NCOLS, set in rebuildTrack
+    var GATE_Y = 0;   // y of the gate wall (set to BANNER_H + (H-BANNER_H)*0.84)
+
+    // Gate holes per column: [{xPct, wPct, dest}]
+    // xPct/wPct are fractions of COL_W; dest is 0-4 or 'finish'
+    var GATE_HOLES = [
+      [{ xPct: 0.55, wPct: 0.32, dest: 1 }],                                                                        // col 0: right → col 1
+      [{ xPct: 0.08, wPct: 0.30, dest: 0 }, { xPct: 0.62, wPct: 0.30, dest: 2 }],                                  // col 1: ←0 →2
+      [{ xPct: 0.04, wPct: 0.24, dest: 1 }, { xPct: 0.38, wPct: 0.24, dest: 'finish' }, { xPct: 0.72, wPct: 0.24, dest: 3 }], // col 2: FINISH in center
+      [{ xPct: 0.08, wPct: 0.30, dest: 2 }, { xPct: 0.62, wPct: 0.30, dest: 4 }],                                  // col 3: ←2 →4
+      [{ xPct: 0.13, wPct: 0.32, dest: 3 }],                                                                        // col 4: left → col 3
+    ];
+
+    var columnPegs = [[], [], [], [], []];
+    var GEM_POS    = null; // kept for compatibility — set to a position in col 2
+    var gems       = [];
+
+    function generateColumnPegs(colIdx) {
+      var result = [];
+      var x0  = colIdx * COL_W;
+      var pR  = COL_W * 0.048;
+      var minD = COL_W * 0.18;
+      var margin = pR * 1.5;
+      var topY = BANNER_H + (GATE_Y - BANNER_H) * 0.06;
+      var botY = GATE_Y   - (GATE_Y - BANNER_H) * 0.06;
+      var attempts = 0;
+      while (result.length < 14 && attempts < 2000) {
+        attempts++;
+        var x = x0 + margin + Math.random() * (COL_W - 2 * margin);
+        var y = topY + Math.random() * (botY - topY);
+        var ok = true;
+        for (var i = 0; i < result.length; i++) {
+          var dx = x - result[i].x, dy = y - result[i].y;
+          if (Math.sqrt(dx*dx+dy*dy) < minD) { ok = false; break; }
+        }
+        if (ok) result.push({ x: x, y: y, r: pR });
+      }
+      return result;
+    }
+
+    function rebuildTrack() {
+      COL_W  = W / NCOLS;
+      GATE_Y = BANNER_H + (H - BANNER_H) * 0.84;
+      GEM_POS = { x: 2 * COL_W + COL_W * 0.5, y: BANNER_H + (GATE_Y - BANNER_H) * 0.5 };
+      for (var c = 0; c < NCOLS; c++) {
+        columnPegs[c] = generateColumnPegs(c);
+      }
+      rebuildGateRamps();
+      if (marbles.length > 0) positionMarbles(marbles);
+    }
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+      rebuildTrack();
+    }
+    window.addEventListener('resize', resize);
+
+    // ---- ActionCable minimal client ----
+    var wsBase = window.location.origin.replace(/^http/, 'ws') + '/cable';
+
+    function AzCable() {
+      this._subs = [];
+      this._ws   = null;
+      this._connect();
+    }
+
+    AzCable.prototype._connect = function () {
+      var self = this;
+      this._ws = new WebSocket(wsBase);
+      this._ws.onopen = function () {
+        self._subs.forEach(function (s) { s._subscribe(); });
+      };
+      this._ws.onmessage = function (e) {
+        var msg = JSON.parse(e.data);
+        if (msg.type === 'ping' || msg.type === 'welcome' || msg.type === 'confirm_subscription') return;
+        var id = msg.identifier;
+        self._subs.forEach(function (s) {
+          if (s._id === id && msg.message) s._received(msg.message);
+        });
+      };
+      this._ws.onclose = function () {
+        setTimeout(function () { self._connect(); }, 2000);
+      };
+    };
+
+    AzCable.prototype.subscribe = function (params, handlers) {
+      var sub = new AzSub(this, params, handlers);
+      this._subs.push(sub);
+      if (this._ws && this._ws.readyState === WebSocket.OPEN) sub._subscribe();
+      return sub;
+    };
+
+    AzCable.prototype._send = function (data) {
+      if (this._ws && this._ws.readyState === WebSocket.OPEN)
+        this._ws.send(JSON.stringify(data));
+    };
+
+    function AzSub(cable, params, handlers) {
+      this._cable    = cable;
+      this._params   = params;
+      this._id       = JSON.stringify(params);
+      this._handlers = handlers;
+    }
+    AzSub.prototype._subscribe = function () {
+      this._cable._send({ command: 'subscribe', identifier: this._id });
+    };
+    AzSub.prototype._received = function (msg) {
+      if (this._handlers.received) this._handlers.received(msg);
+    };
+    AzSub.prototype.send = function (action, data) {
+      this._cable._send({
+        command:    'message',
+        identifier: this._id,
+        data:       JSON.stringify(Object.assign({ action: action }, data || {}))
+      });
+    };
+
+    // ---- Game state ----
+    var phase        = 'lobby';
+    var players      = [];
+    var marbles      = [];
+    var seriesScores = [];
+    var raceCount    = 5;
+    var botCount     = 3;
+    var currentRace  = 0;
+    var raceResults  = null;
+    var gameOverData = null;
+    var gems = [];  // [{x,y,collected,color}] — one per player, spawned at race start
+    var countdownStart    = 0;
+    var nextRaceTimer     = 0;
+    var finishCount       = 0;
+
+    // ---- Audio engine (Web Audio API, no external files) ----
+    var audioCtx = null;
+    var raceLoop = null;
+    var lastCountdownStep = -1;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+
+    function playTone(freq, type, vol, dur, t) {
+      if (!audioCtx) return;
+      var osc = audioCtx.createOscillator();
+      var g   = audioCtx.createGain();
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.01);
+    }
+
+    function playNoise(vol, dur, freqLo, freqHi, t) {
+      if (!audioCtx) return;
+      var n = audioCtx.sampleRate * dur;
+      var buf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      var src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      var filt = audioCtx.createBiquadFilter();
+      filt.type = 'bandpass';
+      filt.frequency.setValueAtTime(freqLo, t);
+      filt.frequency.exponentialRampToValueAtTime(freqHi, t + dur * 0.6);
+      filt.Q.value = 1.5;
+      var g = audioCtx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      src.connect(filt); filt.connect(g); g.connect(audioCtx.destination);
+      src.start(t); src.stop(t + dur + 0.01);
+    }
+
+    function playPegHit() {
+      if (!audioCtx) return;
+      var t = audioCtx.currentTime;
+      playNoise(0.12, 0.04, 600 + Math.random()*400, 200, t);
+      playTone(120 + Math.random()*80, 'sawtooth', 0.06, 0.04, t);
+    }
+
+    function playGateExit() {
+      if (!audioCtx) return;
+      var t = audioCtx.currentTime;
+      playNoise(0.18, 0.22, 300, 1400, t);
+      playTone(220, 'sine', 0.10, 0.25, t);
+    }
+
+    function playWin() {
+      if (!audioCtx) return;
+      var notes = [523, 659, 784, 1047, 1319];
+      notes.forEach(function(f, i) {
+        var t = audioCtx.currentTime + i * 0.09;
+        playTone(f, 'sine', 0.25, 0.4, t);
+        playTone(f * 2, 'sine', 0.08, 0.3, t + 0.02);
+      });
+    }
+
+    function playCountdownBeep(step) {
+      if (!audioCtx) return;
+      var t = audioCtx.currentTime;
+      if (step === 3) {
+        // GO! — bright chord
+        [523, 659, 784].forEach(function(f) { playTone(f, 'square', 0.15, 0.4, t); });
+      } else {
+        var freq = [220, 277, 330][step] || 220;
+        playTone(freq, 'sine', 0.25, 0.12, t);
+      }
+    }
+
+    function startRaceMusic() {
+      if (!audioCtx || raceLoop) return;
+      var bpm = 130, beat = 60 / bpm;
+
+      function schedule(start) {
+        var t = start;
+        // Kick
+        playTone(80, 'sine', 0.35, 0.15, t);
+        playNoise(0.20, 0.06, 60, 120, t);
+        playTone(80, 'sine', 0.20, 0.10, t + beat * 2);
+        playNoise(0.15, 0.05, 60, 120, t + beat * 2);
+        // Snare (beat 2 and 4)
+        playNoise(0.18, 0.10, 800, 3000, t + beat);
+        playNoise(0.18, 0.10, 800, 3000, t + beat * 3);
+        // Hi-hat 8ths
+        for (var i = 0; i < 8; i++) playNoise(0.05, 0.04, 8000, 12000, t + i * beat * 0.5);
+        // Bass line
+        [55, 55, 65, 73].forEach(function(f, i) {
+          playTone(f, 'sawtooth', 0.18, beat * 0.7, t + i * beat);
+        });
+      }
+
+      var nextBeat = audioCtx.currentTime;
+      schedule(nextBeat);
+
+      raceLoop = setInterval(function() {
+        nextBeat += beat * 4;
+        schedule(nextBeat);
+      }, beat * 4 * 1000 * 0.98);
+    }
+
+    function stopRaceMusic() {
+      if (raceLoop) { clearInterval(raceLoop); raceLoop = null; }
+    }
+
+    // ---- Cable connection ----
+    var cable = new AzCable();
+    var sub   = cable.subscribe(
+      { channel: 'MarbleRunChannel', code: gameCode, role: 'tv' },
+      { received: onMessage }
+    );
+
+    function onMessage(msg) {
+      switch (msg.type) {
+        case 'lobby_update':
+          players = msg.players || [];
+          break;
+        case 'series_starting':
+          players    = msg.players || [];
+          raceCount  = msg.race_count;
+          enterCountdown();
+          break;
+        case 'race_started':
+          currentRace = msg.current_race;
+          spawnMarbles();
+          phase = 'racing';
+          break;
+        case 'marble_finished':
+          break;
+        case 'nudge':
+          marbles.forEach(function (m) {
+            if (m.color === msg.color && !m.finished) {
+              m.vx += (Math.random() - 0.5) * 10;
+              m.vy -= 6 + Math.random() * 5;
+              m.flashFrames = 10;
+            }
+          });
+          break;
+        case 'gem_collected':
+          if (msg.gem_index >= 0 && msg.gem_index < gems.length) {
+            gems[msg.gem_index].collected = true;
+            gems[msg.gem_index].color = msg.color;
+          }
+          break;
+        case 'race_over':
+          raceResults  = msg;
+          seriesScores = msg.scores || [];
+          phase = 'results';
+          nextRaceTimer = Date.now() + 5000;
+          stopRaceMusic();
+          lastCountdownStep = -1;
+          break;
+        case 'next_countdown':
+          seriesScores = msg.scores || [];
+          enterCountdown();
+          break;
+        case 'game_over':
+          gameOverData = msg;
+          seriesScores = msg.scores || [];
+          phase = 'game_over';
+          break;
+      }
+    }
+
+    // ---- Phase transitions ----
+    function enterCountdown() {
+      phase          = 'countdown';
+      countdownStart = Date.now();
+      marbles        = players.map(function (p) {
+        return createMarble(p);
+      });
+      positionMarbles(marbles);
+    }
+
+    function createMarble(p) {
+      return {
+        color: p.color, colorHex: p.color_hex || MARBLE_COLORS[p.color] || '#fff',
+        name: p.name,
+        x: 0, y: 0, vx: 0, vy: 0,
+        r: Math.min(W || 600, H || 900) / NCOLS * 0.055,
+        finished: false, finishPos: null,
+        gemPassed: false, flashFrames: 0,
+        transitioning: null  // null or {fromX, toX, timer, maxTimer}
+      };
+    }
+
+    function positionMarbles(mbs) {
+      if (!mbs.length) return;
+      var r = mbs[0].r;
+      mbs.forEach(function (m, i) {
+        m.x = COL_W * (0.15 + Math.random() * 0.65);
+        m.y = BANNER_H + r * 2 + i * r * 0.4;
+        m.vx = (Math.random() - 0.5) * 0.8;
+        m.vy = 0;
+        m.transitioning = null;
+        m.gemPassed = false;
+        m.flashFrames = 0;
+      });
+    }
+
+    function spawnGems(n) {
+      gems = [];
+      for (var gi = 0; gi < n; gi++) {
+        var col = gi % NCOLS;
+        gems.push({
+          x: col * COL_W + COL_W * (0.2 + Math.random() * 0.6),
+          y: BANNER_H + (GATE_Y - BANNER_H) * (0.25 + Math.random() * 0.50),
+          collected: false, color: null
+        });
+      }
+    }
+
+    function spawnMarbles() {
+      finishCount = 0;
+      for (var c = 0; c < NCOLS; c++) columnPegs[c] = generateColumnPegs(c);
+      spawnGems(players.length);
+      positionMarbles(marbles);
+      marbles.forEach(function (m) {
+        m.finished = false; m.finishPos = null;
+        m.transitioning = null;
+      });
+    }
+
+    // ---- Collision helpers ----
+    function resolveSegment(m, ax, ay, bx, by) {
+      var dx = bx-ax, dy = by-ay, len2 = dx*dx+dy*dy;
+      if (len2 === 0) return;
+      var t  = Math.max(0, Math.min(1, ((m.x-ax)*dx+(m.y-ay)*dy)/len2));
+      var cx = ax+t*dx, cy = ay+t*dy;
+      var px = m.x-cx, py = m.y-cy;
+      var dist = Math.sqrt(px*px+py*py);
+      if (dist < m.r && dist > 0) {
+        var nx = px/dist, ny = py/dist;
+        m.x += nx*(m.r-dist); m.y += ny*(m.r-dist);
+        var dot = m.vx*nx+m.vy*ny;
+        if (dot < 0) {
+          m.vx -= (1+PEG_RESTITUTION)*dot*nx;
+          m.vy -= (1+PEG_RESTITUTION)*dot*ny;
+          m.flashFrames = 5;
+        }
+      }
+    }
+
+    function resolvePeg(m, peg) {
+      var dx = m.x - peg.x, dy = m.y - peg.y;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      var minD = m.r + peg.r;
+      if (dist < minD && dist > 0) {
+        var nx = dx/dist, ny = dy/dist;
+        m.x = peg.x + nx * minD;
+        m.y = peg.y + ny * minD;
+        var dot = m.vx*nx + m.vy*ny;
+        if (dot < 0) {
+          m.vx -= (1 + PEG_RESTITUTION) * dot * nx;
+          m.vy -= (1 + PEG_RESTITUTION) * dot * ny;
+          m.flashFrames = 6;
+          playPegHit();
+        }
+      }
+    }
+
+    function resolveMarbles(a, b) {
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      var minD = a.r + b.r;
+      if (dist < minD && dist > 0.001) {
+        var nx = dx/dist, ny = dy/dist;
+        var overlap = (minD - dist) * 0.5;
+        a.x -= nx*overlap; a.y -= ny*overlap;
+        b.x += nx*overlap; b.y += ny*overlap;
+        var dvx = b.vx - a.vx, dvy = b.vy - a.vy;
+        var dot = dvx*nx + dvy*ny;
+        if (dot < 0) {
+          var imp = dot * MM_RESTITUTION;
+          a.vx += imp*nx; a.vy += imp*ny;
+          b.vx -= imp*nx; b.vy -= imp*ny;
+        }
+      }
+    }
+
+    // ---- Physics tick (one fixed step = 1/60s) ----
+    function tickMarbles() {
+      var i, j, m, col;
+
+      // Flash decay + gem check
+      for (i = 0; i < marbles.length; i++) {
+        m = marbles[i];
+        if (m.finished || m.transitioning) continue;
+        if (m.flashFrames > 0) m.flashFrames--;
+        if (!m.gemPassed) {
+          var gcR = COL_W * 0.12;
+          for (j = 0; j < gems.length; j++) {
+            if (gems[j].collected) continue;
+            var gdx = m.x - gems[j].x, gdy = m.y - gems[j].y;
+            if (Math.sqrt(gdx*gdx+gdy*gdy) < gcR) {
+              m.gemPassed = true;
+              gems[j].collected = true; gems[j].color = m.color;
+              sub.send('gem_collected', { color: m.color, gem_index: j });
+              break;
+            }
+          }
+        }
+      }
+
+      // Teleport flash — marble vanishes, reappears at top of new column
+      for (i = 0; i < marbles.length; i++) {
+        m = marbles[i];
+        if (!m.transitioning) continue;
+        m.transitioning.timer++;
+        if (m.transitioning.timer >= m.transitioning.flashFrames) {
+          // Reappear at top of destination column with a big flash
+          m.x = m.transitioning.toX;
+          m.y = BANNER_H + m.r * 2;
+          m.vx = (Math.random() - 0.5) * 1.5;
+          m.vy = 0;
+          m.gemPassed   = false;
+          m.flashFrames = 14;  // bright flash on arrival
+          m.transitioning = null;
+          playGateExit();
+        }
+        // While waiting: keep marble hidden at gate position
+        m.y = GATE_Y + 999;  // move off-screen during flash delay
+      }
+
+      // Physics substep
+      for (var s = 0; s < 2; s++) {
+        var dt = 0.5;
+
+        // Integrate
+        for (i = 0; i < marbles.length; i++) {
+          m = marbles[i];
+          if (m.finished || m.transitioning) continue;
+          m.vy += GRAVITY * dt;
+          m.vx *= DRAG;
+          m.vy *= DRAG;
+          m.x  += m.vx * dt;
+          m.y  += m.vy * dt;
+        }
+
+        // Column walls + top wall
+        for (i = 0; i < marbles.length; i++) {
+          m = marbles[i];
+          if (m.finished || m.transitioning) continue;
+          col = Math.max(0, Math.min(NCOLS-1, Math.floor(m.x / COL_W)));
+          var cL = col * COL_W, cR = (col+1) * COL_W;
+          if (m.x - m.r < cL)      { m.x = cL + m.r;       m.vx =  Math.abs(m.vx) * 0.45; }
+          if (m.x + m.r > cR)      { m.x = cR - m.r;       m.vx = -Math.abs(m.vx) * 0.45; }
+          if (m.y - m.r < BANNER_H){ m.y = BANNER_H + m.r; m.vy =  Math.abs(m.vy) * 0.30; }
+        }
+
+        // Peg collisions (only within same column)
+        for (i = 0; i < marbles.length; i++) {
+          m = marbles[i];
+          if (m.finished || m.transitioning) continue;
+          col = Math.max(0, Math.min(NCOLS-1, Math.floor(m.x / COL_W)));
+          var colPegs = columnPegs[col];
+          for (j = 0; j < colPegs.length; j++) resolvePeg(m, colPegs[j]);
+        }
+
+        // Gate ramp collisions (angled slopes funnelling marbles toward holes)
+        for (i = 0; i < marbles.length; i++) {
+          m = marbles[i];
+          if (m.finished || m.transitioning) continue;
+          for (j = 0; j < gateRamps.length; j++) {
+            var gr = gateRamps[j];
+            resolveSegment(m, gr.ax, gr.ay, gr.bx, gr.by);
+          }
+        }
+
+        // Marble-marble (same column only)
+        for (i = 0; i < marbles.length; i++) {
+          if (marbles[i].finished || marbles[i].transitioning) continue;
+          for (j = i+1; j < marbles.length; j++) {
+            if (marbles[j].finished || marbles[j].transitioning) continue;
+            var ci = Math.floor(marbles[i].x / COL_W), cj = Math.floor(marbles[j].x / COL_W);
+            if (ci === cj) resolveMarbles(marbles[i], marbles[j]);
+          }
+        }
+
+        // Gate detection
+        for (i = 0; i < marbles.length; i++) {
+          m = marbles[i];
+          if (m.finished || m.transitioning) continue;
+          if (m.y + m.r < GATE_Y) continue;
+
+          col = Math.max(0, Math.min(NCOLS-1, Math.floor(m.x / COL_W)));
+          var localX = m.x - col * COL_W;
+          var holes  = GATE_HOLES[col];
+          var inHole = false;
+
+          for (j = 0; j < holes.length; j++) {
+            var hL = holes[j].xPct * COL_W;
+            var hR = hL + holes[j].wPct * COL_W;
+            if (localX > hL && localX < hR) {
+              inHole = true;
+              var dest = holes[j].dest;
+              if (dest === 'finish') {
+                m.finished  = true;
+                finishCount += 1;
+                m.finishPos = finishCount;
+                sub.send('marble_finished', { color: m.color });
+                if (finishCount === 1) playWin();
+              } else {
+                var toX = dest * COL_W + COL_W * 0.5 + (Math.random()-0.5) * COL_W * 0.3;
+                m.transitioning = {
+                  toX: toX, timer: 0, flashFrames: 8
+                };
+                m.vy = 0; m.vx = 0;
+                m.flashFrames = 10;  // flash on exit
+              }
+              break;
+            }
+          }
+
+          if (!inHole) {
+            // Solid gate — bounce up
+            m.y  = GATE_Y - m.r - 1;
+            m.vy = -Math.abs(m.vy) * 0.55;
+          }
+        }
+      }
+    }
+
+    // ---- Rendering helpers ----
+    function lighten(hex) { return blendHex(hex, '#ffffff', 0.35); }
+    function darken(hex)  { return blendHex(hex, '#000000', 0.4); }
+    function blendHex(hex, other, t) {
+      var a = parseHex(hex), b = parseHex(other);
+      return 'rgb(' +
+        Math.round(a[0]+(b[0]-a[0])*t) + ',' +
+        Math.round(a[1]+(b[1]-a[1])*t) + ',' +
+        Math.round(a[2]+(b[2]-a[2])*t) + ')';
+    }
+    function parseHex(hex) {
+      hex = hex.replace('#','');
+      if (hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16)];
+    }
+
+    // Gate ramps — full mountain-range of slopes, zero flat floor
+    var gateRamps = [];
+
+    function rebuildGateRamps() {
+      gateRamps = [];
+      var peakH = (H - BANNER_H) * 0.065;
+
+      for (var c = 0; c < NCOLS; c++) {
+        var cx0   = c * COL_W;
+        var cx1   = (c + 1) * COL_W;
+        var holes = GATE_HOLES[c];
+        if (!holes.length) continue;
+
+        // Collect solid x-ranges: [colLeft...hole1Left, hole1Right...hole2Left, ..., lastHoleRight...colRight]
+        var solids = [];
+        solids.push({ lx: cx0, rx: cx0 + holes[0].xPct * COL_W });
+        for (var k = 0; k < holes.length - 1; k++) {
+          solids.push({
+            lx: cx0 + (holes[k].xPct + holes[k].wPct) * COL_W,
+            rx: cx0 + holes[k+1].xPct * COL_W
+          });
+        }
+        solids.push({ lx: cx0 + (holes[holes.length-1].xPct + holes[holes.length-1].wPct) * COL_W, rx: cx1 });
+
+        solids.forEach(function (seg, si) {
+          var w = seg.rx - seg.lx;
+          if (w < 2) return;
+          // Leftmost segment: slope downhill toward first hole (rightward)
+          if (si === 0) {
+            gateRamps.push({ ax: seg.lx, ay: GATE_Y - peakH, bx: seg.rx, by: GATE_Y });
+          // Rightmost segment: slope downhill toward last hole (leftward)
+          } else if (si === solids.length - 1) {
+            gateRamps.push({ ax: seg.lx, ay: GATE_Y, bx: seg.rx, by: GATE_Y - peakH });
+          // Middle segment: peak in centre sloping to both sides
+          } else {
+            var midX = (seg.lx + seg.rx) / 2;
+            gateRamps.push({ ax: seg.lx, ay: GATE_Y, bx: midX, by: GATE_Y - peakH });
+            gateRamps.push({ ax: midX, ay: GATE_Y - peakH, bx: seg.rx, by: GATE_Y });
+          }
+        });
+      }
+    }
+
+    function drawTrack() {
+      var gateH = 22;
+      var fh    = (H - BANNER_H) * 0.10;
+
+      // Column backgrounds — alternating subtle tints
+      var colTints = [
+        'rgba(0,60,120,0.10)', 'rgba(0,80,60,0.08)',
+        'rgba(80,50,0,0.14)',   // centre: warm gold tint
+        'rgba(80,0,80,0.08)', 'rgba(60,0,0,0.08)'
+      ];
+      for (var c = 0; c < NCOLS; c++) {
+        ctx.fillStyle = colTints[c];
+        ctx.fillRect(c*COL_W, BANNER_H, COL_W, GATE_Y - BANNER_H);
+      }
+
+      // Strong vertical dividers
+      for (var c = 1; c < NCOLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c*COL_W, BANNER_H);
+        ctx.lineTo(c*COL_W, GATE_Y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth   = 2;
+        ctx.stroke();
+      }
+
+      // Column header labels — bigger and brighter
+      for (var c = 0; c < NCOLS; c++) {
+        var isCtr = c === 2;
+        ctx.font         = 'bold 9px "Press Start 2P", monospace';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle    = isCtr ? '#ffd700' : 'rgba(180,200,255,0.60)';
+        if (isCtr) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12; }
+        ctx.fillText(isCtr ? '★ WIN ★' : String(c+1), c*COL_W + COL_W/2, BANNER_H + 8);
+        ctx.shadowBlur = 0;
+      }
+
+      // Pegs — bright white-blue with clear glow
+      for (var c = 0; c < NCOLS; c++) {
+        columnPegs[c].forEach(function (p) {
+          ctx.save();
+          ctx.shadowColor = '#88aaff';
+          ctx.shadowBlur  = 12;
+          ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+          ctx.fillStyle = '#2a4a7f'; ctx.fill();
+          ctx.strokeStyle = '#88c0ff'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.restore();
+          ctx.beginPath(); ctx.arc(p.x-p.r*0.3,p.y-p.r*0.3,p.r*0.32,0,Math.PI*2);
+          ctx.fillStyle = 'rgba(220,240,255,0.55)'; ctx.fill();
+        });
+      }
+
+      // Gate ramps — draw as angled guide slopes (no flat floor)
+      gateRamps.forEach(function (s) {
+        ctx.beginPath();
+        ctx.moveTo(s.ax, s.ay);
+        ctx.lineTo(s.bx, s.by);
+        ctx.strokeStyle = 'rgba(200,220,255,0.65)';
+        ctx.lineWidth   = Math.max(3, COL_W * 0.026);
+        ctx.lineCap     = 'round';
+        ctx.stroke();
+      });
+
+      // Gate hole highlights — glow bars at GATE_Y showing where holes are
+      for (var c = 0; c < NCOLS; c++) {
+        var cx0   = c * COL_W;
+        var holes = GATE_HOLES[c];
+
+        holes.forEach(function (h) {
+          var hx    = cx0 + h.xPct * COL_W;
+          var hw    = h.wPct * COL_W;
+          var isFin = h.dest === 'finish';
+
+          if (isFin) {
+            ctx.save();
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur  = 24;
+            ctx.fillStyle   = 'rgba(255,215,0,0.75)';
+            ctx.fillRect(hx, GATE_Y - gateH/2, hw, gateH);
+            ctx.restore();
+            ctx.font         = 'bold 9px "Press Start 2P", monospace';
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle    = '#ffd700';
+            ctx.shadowColor  = '#ffd700';
+            ctx.shadowBlur   = 14;
+            ctx.fillText('★', hx + hw/2, GATE_Y);
+            ctx.shadowBlur   = 0;
+          } else {
+            ctx.fillStyle = 'rgba(80,160,255,0.50)';
+            ctx.fillRect(hx, GATE_Y - gateH/2, hw, gateH);
+          }
+        });
+      }
+
+      // Win shaft glow below centre column
+      var wg = ctx.createLinearGradient(2*COL_W, GATE_Y, 2*COL_W, H);
+      wg.addColorStop(0, 'rgba(255,215,0,0.20)');
+      wg.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx.fillStyle = wg;
+      ctx.fillRect(2*COL_W, GATE_Y + gateH/2, COL_W, H - GATE_Y - gateH/2);
+    }
+
+    var gemAngle = 0;
+    var gemPulse = 0;
+
+    function drawGem(ts) {
+      gemAngle += 0.022;
+      gemPulse = 0.85 + 0.15 * Math.sin(ts * 0.005);
+      var size = Math.min(W, H) * 0.028 * gemPulse;
+
+      gems.forEach(function (g) {
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        ctx.rotate(gemAngle);
+        ctx.globalAlpha = g.collected ? 0.12 : 1;
+        if (!g.collected) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 28; }
+        ctx.beginPath();
+        for (var sp = 0; sp < 10; sp++) {
+          var ang = (sp * Math.PI / 5) - Math.PI / 2;
+          var rad = sp % 2 === 0 ? size : size * 0.42;
+          sp === 0 ? ctx.moveTo(Math.cos(ang)*rad, Math.sin(ang)*rad)
+                   : ctx.lineTo(Math.cos(ang)*rad, Math.sin(ang)*rad);
+        }
+        ctx.closePath();
+        ctx.fillStyle = g.collected ? (MARBLE_COLORS[g.color] || '#888') : '#ffd700';
+        ctx.fill();
+        if (!g.collected) {
+          ctx.strokeStyle = '#ffe980';
+          ctx.lineWidth = size * 0.12;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawMarbles() {
+      var sorted = marbles.slice().sort(function (a, b) { return a.y - b.y; });
+      sorted.forEach(function (m) {
+        var x = m.x, y = m.y, r = m.r;
+        ctx.save();
+        if (m.finished)      { ctx.globalAlpha = 0.55; }
+        if (m.transitioning) { ctx.globalAlpha = 0.80; }
+
+        if (m.flashFrames > 0) {
+          var ringR = r * (1.8 + (8 - m.flashFrames) * 0.15);
+          ctx.beginPath(); ctx.arc(x, y, ringR, 0, Math.PI*2);
+          ctx.strokeStyle = 'rgba(255,120,50,' + (m.flashFrames/8).toFixed(2) + ')';
+          ctx.lineWidth = 3; ctx.stroke();
+        }
+
+        ctx.beginPath(); ctx.arc(x+r*0.15, y+r*0.2, r, 0, Math.PI*2);
+        ctx.fillStyle='rgba(0,0,0,0.32)'; ctx.fill();
+
+        var grad = ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
+        grad.addColorStop(0, lighten(m.colorHex));
+        grad.addColorStop(0.6, m.colorHex);
+        grad.addColorStop(1, darken(m.colorHex));
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+        ctx.fillStyle=grad; ctx.fill();
+
+        ctx.beginPath(); ctx.arc(x-r*0.28,y-r*0.28,r*0.25,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.50)'; ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // ---- Overlay panels ----
+    function panel(x, y, w, h, alpha) {
+      ctx.fillStyle = 'rgba(5,10,18,' + (alpha || 0.88) + ')';
+      ctx.beginPath();
+      roundRect(ctx, x, y, w, h, 16);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function roundRect(c, x, y, w, h, r) {
+      c.moveTo(x + r, y);
+      c.lineTo(x + w - r, y);
+      c.quadraticCurveTo(x + w, y, x + w, y + r);
+      c.lineTo(x + w, y + h - r);
+      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      c.lineTo(x + r, y + h);
+      c.quadraticCurveTo(x, y + h, x, y + h - r);
+      c.lineTo(x, y + r);
+      c.quadraticCurveTo(x, y, x + r, y);
+      c.closePath();
+    }
+
+    function drawLobby() {
+      var pw = Math.min(W * 0.55, 580);
+      var px = (W - pw) / 2;
+      var py = BANNER_H + (H - BANNER_H) * 0.06;
+      var ph = (H - BANNER_H) * 0.88;
+
+      panel(px, py, pw, ph);
+
+      var cx = W / 2;
+      var y  = py + 36;
+
+      // Title
+      ctx.font         = 'bold 28px "Press Start 2P", monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle    = '#fff';
+      ctx.fillText('MARBLE RUN', cx, y);
+      y += 54;
+
+      // Code
+      ctx.font      = 'bold 15px "Courier New", monospace';
+      ctx.fillStyle = '#00ffc8';
+      ctx.fillText('JOIN: ' + gameCode, cx, y);
+      y += 28;
+      ctx.font      = '12px "Courier New", monospace';
+      ctx.fillStyle = '#556';
+      ctx.fillText('ez-az.net/marble-run/join?code=' + gameCode, cx, y);
+      y += 36;
+
+      // Race picker (left/right) + Bot picker (up/down)
+      ctx.font      = 'bold 13px "Courier New", monospace';
+      ctx.fillStyle = '#778';
+      ctx.fillText('← RACES ' + raceCount + ' →', cx, y);
+      y += 24;
+      ctx.fillText('↑ BOTS  ' + botCount + ' ↓', cx, y);
+      y += 36;
+
+      // Player list
+      if (players.length === 0) {
+        ctx.font      = '11px "Courier New", monospace';
+        ctx.fillStyle = '#334';
+        ctx.fillText('Waiting for players to join...', cx, y);
+      } else {
+        var mr     = Math.min(W, H) * 0.014;
+        var rowH   = mr * 2.8;
+        var cols   = players.length > 10 ? 2 : 1;
+        var colW   = pw / cols;
+        players.forEach(function (p, i) {
+          var col    = i % cols;
+          var row    = Math.floor(i / cols);
+          var rx     = px + col * colW + colW / 2;
+          var ry     = y + row * rowH;
+          if (ry + rowH > py + ph - 50) return;
+
+          // Dot
+          ctx.beginPath();
+          ctx.arc(rx - colW * 0.25, ry + mr, mr, 0, Math.PI * 2);
+          var grad = ctx.createRadialGradient(
+            rx - colW * 0.25 - mr*0.3, ry + mr - mr*0.3, mr*0.1,
+            rx - colW * 0.25, ry + mr, mr
+          );
+          var hex = p.color_hex || MARBLE_COLORS[p.color] || '#fff';
+          grad.addColorStop(0, lighten(hex));
+          grad.addColorStop(1, darken(hex));
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          ctx.font         = 'bold 12px "Courier New", monospace';
+          ctx.textAlign    = 'left';
+          ctx.fillStyle    = '#ccc';
+          ctx.fillText(p.name, rx - colW * 0.25 + mr + 8, ry + mr * 0.35);
+          ctx.textAlign = 'center';
+        });
+
+        y += Math.ceil(players.length / cols) * rowH + 12;
+      }
+
+      // Start prompt
+      var bottomY   = py + ph - 50;
+      var totalRacers = players.length + botCount;
+      if (totalRacers >= 2) {
+        ctx.font         = 'bold 12px "Press Start 2P", monospace';
+        ctx.fillStyle    = '#00ffc8';
+        ctx.textAlign    = 'center';
+        ctx.fillText('PRESS ENTER TO START', cx, bottomY);
+      } else {
+        ctx.font         = '11px "Courier New", monospace';
+        ctx.fillStyle    = '#445';
+        ctx.textAlign    = 'center';
+        ctx.fillText('Add players or bots (2+ needed)', cx, bottomY);
+      }
+    }
+
+    function drawCountdown(ts) {
+      var elapsed = (Date.now() - countdownStart) / 1000;
+      var step    = Math.floor(elapsed);  // 0=3, 1=2, 2=1, 3=GO, 4=race
+
+      if (step >= 4) {
+        if (phase === 'countdown') {
+          phase = 'temp_waiting_race_started';
+          sub.send('race_started', {});
+        }
+        return;
+      }
+
+      var labels = ['3', '2', '1', 'GO!'];
+      var label  = labels[step] || '';
+      var frac   = elapsed - step;
+      var scale  = 1.0 + 0.4 * (1 - frac);
+      var alpha  = step < 3 ? 1 : Math.max(0, 1 - frac * 2);
+
+      if (step !== lastCountdownStep) {
+        lastCountdownStep = step;
+        playCountdownBeep(step);
+        if (step === 3) startRaceMusic();
+      }
+
+      drawMarbles();
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scale, scale);
+
+      var fontSize = Math.min(W, H) * 0.18;
+      ctx.font         = 'bold ' + fontSize + 'px "Press Start 2P", monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.shadowColor = step < 3 ? '#fff' : '#00ffc8';
+      ctx.shadowBlur  = 40;
+      ctx.fillStyle   = step < 3 ? '#fff' : '#00ffc8';
+      ctx.fillText(label, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    function drawResults(ts) {
+      drawTrack();
+      drawGem(ts);
+      drawMarbles();
+
+      var timeLeft = Math.max(0, Math.ceil((nextRaceTimer - Date.now()) / 1000));
+
+      // Wide panel — two-column grid layout
+      var pw = Math.min(W * 0.80, 900);
+      var ph = Math.min((H - BANNER_H) * 0.82, 520);
+      var px = (W - pw) / 2;
+      var py = BANNER_H + ((H - BANNER_H) - ph) / 2;
+      panel(px, py, pw, ph, 0.94);
+
+      var cx = W / 2;
+      var y  = py + 20;
+
+      // Header
+      ctx.font = 'bold 11px "Press Start 2P", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = '#778';
+      if (raceResults) ctx.fillText('RACE ' + raceResults.race + ' OF ' + raceResults.race_count, cx, y);
+      y += 30;
+
+      // Grid: race results left column, series totals right column
+      var cols   = 2;
+      var colW   = pw / cols;
+      var mr     = 9;
+      var cellH  = 38;
+
+      // -- Race result column (left) --
+      ctx.font = 'bold 9px "Press Start 2P", monospace';
+      ctx.textAlign = 'left'; ctx.fillStyle = '#445';
+      ctx.fillText('RACE', px + 12, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#445';
+      ctx.fillText('SERIES', px + colW - 12, y);
+      y += 18;
+
+      var results  = (raceResults && raceResults.results) || [];
+      var scores   = seriesScores || [];
+      var numRows  = Math.max(results.length, scores.length);
+      var medals   = ['#ffd700','#b0b0b0','#cd7f32'];
+
+      for (var i = 0; i < numRows; i++) {
+        var rowY = y + i * cellH;
+        var midY = rowY + cellH / 2;
+
+        // Left: race finish entry
+        var r = results[i];
+        if (r) {
+          var rhex = r.color_hex || MARBLE_COLORS[r.color] || '#fff';
+          // Position number
+          ctx.font = 'bold 12px "Courier New", monospace';
+          ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = medals[i] || '#445';
+          ctx.fillText((i+1) + '.', px + 28, midY);
+          // Marble dot
+          ctx.beginPath(); ctx.arc(px + 46, midY, mr, 0, Math.PI*2);
+          var g1 = ctx.createRadialGradient(px+42,midY-3,2,px+46,midY,mr);
+          g1.addColorStop(0, lighten(rhex)); g1.addColorStop(1, darken(rhex));
+          ctx.fillStyle = g1; ctx.fill();
+          // Name + pts
+          ctx.font = 'bold 12px "Courier New", monospace';
+          ctx.textAlign = 'left'; ctx.fillStyle = '#ddd';
+          ctx.fillText(r.name, px + 62, midY - 6);
+          ctx.font = '10px "Courier New", monospace'; ctx.fillStyle = '#ffd700';
+          var gw = raceResults && raceResults.gem_winners || [];
+          var gem = gw.indexOf(r.color) >= 0 ? ' ★' : '';
+          ctx.fillText('+' + r.points_earned + 'pts' + gem, px + 62, midY + 8);
+        }
+
+        // Right: series standings entry
+        var s = scores[i];
+        if (s) {
+          var shex = s.color_hex || MARBLE_COLORS[s.color] || '#fff';
+          var rx = px + colW;
+          ctx.font = 'bold 12px "Courier New", monospace';
+          ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = medals[i] || '#445';
+          ctx.fillText((i+1) + '.', rx + 24, midY);
+          ctx.beginPath(); ctx.arc(rx + 42, midY, mr, 0, Math.PI*2);
+          var g2 = ctx.createRadialGradient(rx+38,midY-3,2,rx+42,midY,mr);
+          g2.addColorStop(0, lighten(shex)); g2.addColorStop(1, darken(shex));
+          ctx.fillStyle = g2; ctx.fill();
+          ctx.font = 'bold 12px "Courier New", monospace';
+          ctx.textAlign = 'left'; ctx.fillStyle = '#ddd';
+          ctx.fillText(s.name, rx + 56, midY - 6);
+          ctx.font = '10px "Courier New", monospace'; ctx.fillStyle = '#ffd700';
+          ctx.fillText(s.points + 'pts', rx + 56, midY + 8);
+        }
+
+        if (rowY + cellH > py + ph - 36) break;
+      }
+
+      // Countdown
+      ctx.font = 'bold 9px "Press Start 2P", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      var bottomY = py + ph - 10;
+      if (raceResults && raceResults.is_final) {
+        ctx.fillStyle = '#00ffc8';
+        ctx.fillText('FINAL — next in ' + timeLeft + 's', cx, bottomY);
+      } else {
+        ctx.fillStyle = '#556';
+        ctx.fillText('Next race in ' + timeLeft + 's...', cx, bottomY);
+      }
+
+      if (Date.now() >= nextRaceTimer) {
+        nextRaceTimer = Date.now() + 999999;
+        sub.send('next_race', {});
+      }
+    }
+
+    function drawGameOver() {
+      drawTrack();
+      drawMarbles();
+
+      ctx.fillStyle = 'rgba(5,10,18,0.92)';
+      ctx.fillRect(0, BANNER_H, W, H - BANNER_H);
+
+      var cx = W / 2;
+      var y  = BANNER_H + (H - BANNER_H) * 0.12;
+
+      ctx.font         = 'bold 24px "Press Start 2P", monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle    = '#ffd700';
+      ctx.shadowColor  = '#ffd700';
+      ctx.shadowBlur   = 20;
+      ctx.fillText('GAME OVER', cx, y);
+      ctx.shadowBlur = 0;
+      y += 60;
+
+      if (gameOverData && gameOverData.winner) {
+        var w   = gameOverData.winner;
+        var hex = w.color_hex || MARBLE_COLORS[w.color] || '#fff';
+        var mr  = Math.min(W, H) * 0.06;
+
+        ctx.beginPath();
+        ctx.arc(cx, y + mr, mr, 0, Math.PI * 2);
+        var grad = ctx.createRadialGradient(cx - mr*0.3, y + mr - mr*0.3, mr*0.1, cx, y + mr, mr);
+        grad.addColorStop(0, lighten(hex));
+        grad.addColorStop(0.6, hex);
+        grad.addColorStop(1, darken(hex));
+        ctx.fillStyle = grad;
+        ctx.fill();
+        y += mr * 2 + 28;
+
+        ctx.font      = 'bold 36px "Press Start 2P", monospace';
+        ctx.fillStyle = hex;
+        ctx.fillText(w.name, cx, y);
+        y += 56;
+
+        ctx.font      = '11px "Courier New", monospace';
+        ctx.fillStyle = '#556';
+        ctx.fillText('WINS!', cx, y);
+        y += 40;
+      }
+
+      // Final leaderboard
+      var rowH = 34;
+      var mr2  = 10;
+      seriesScores.forEach(function (s, i) {
+        var ry  = y + i * rowH;
+        var hex = s.color_hex || MARBLE_COLORS[s.color] || '#fff';
+
+        ctx.font         = 'bold 13px "Courier New", monospace';
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle    = '#556';
+        ctx.fillText((i+1) + '.', cx - 140, ry + rowH/2);
+
+        ctx.beginPath();
+        ctx.arc(cx - 110, ry + rowH/2, mr2, 0, Math.PI * 2);
+        var g2 = ctx.createRadialGradient(cx-114, ry+rowH/2-4, 2, cx-110, ry+rowH/2, mr2);
+        g2.addColorStop(0, lighten(hex));
+        g2.addColorStop(1, darken(hex));
+        ctx.fillStyle = g2;
+        ctx.fill();
+
+        ctx.font      = 'bold 14px "Courier New", monospace';
+        ctx.fillStyle = '#ddd';
+        ctx.fillText(s.name, cx - 92, ry + rowH/2);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(s.points + ' pts', cx + 140, ry + rowH/2);
+        ctx.textAlign = 'left';
+      });
+
+      var bottomY = H - 60;
+      ctx.font         = 'bold 10px "Press Start 2P", monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle    = '#445';
+      ctx.fillText('PRESS ENTER TO PLAY AGAIN', cx, bottomY);
+    }
+
+    // ---- Keyboard ----
+    var phaseBeforePause = null;
+
+    function drawPause() {
+      ctx.fillStyle = 'rgba(5,10,18,0.82)';
+      ctx.fillRect(0, BANNER_H, W, H - BANNER_H);
+      var cx = W / 2, cy = H / 2;
+      ctx.font = 'bold 20px "Press Start 2P", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('PAUSED', cx, cy - 60);
+      ctx.font = '11px "Press Start 2P", monospace';
+      ctx.fillStyle = '#00ffc8';
+      ctx.fillText('PRESS ESC TO RESUME', cx, cy);
+      ctx.fillStyle = '#ff4757';
+      ctx.fillText('PRESS Q TO QUIT', cx, cy + 40);
+    }
+
+    document.addEventListener('keydown', function (e) {
+      // Pause / resume
+      if (e.key === 'Escape') {
+        if (phase === 'paused') {
+          phase = phaseBeforePause;
+        } else if (phase === 'racing' || phase === 'countdown') {
+          phaseBeforePause = phase;
+          phase = 'paused';
+        }
+        return;
+      }
+      // Quit from pause
+      if (e.key === 'q' || e.key === 'Q') {
+        if (phase === 'paused') { window.location.href = '/'; }
+        return;
+      }
+
+      if (phase === 'lobby') {
+        if (e.key === 'ArrowLeft')  { raceCount = Math.max(1, raceCount - 1); }
+        if (e.key === 'ArrowRight') { raceCount = Math.min(20, raceCount + 1); }
+        if (e.key === 'ArrowUp')    { botCount  = Math.min(20, botCount + 1); }
+        if (e.key === 'ArrowDown')  { botCount  = Math.max(0, botCount - 1); }
+        if (e.key === 'Enter' && (players.length + botCount) >= 2) {
+          initAudio();
+          sub.send('start_series', { race_count: raceCount, bot_count: botCount });
+        }
+      }
+      if (e.key === 'Enter' && phase === 'game_over') {
+        location.reload();
+      }
+    });
+
+    // ---- Main loop (fixed-timestep physics, variable-rate render) ----
+    // Core concept from MainLoop.js: accumulate elapsed time, run physics
+    // in fixed 1/60s steps so speed is identical at any frame rate.
+    function loop(ts) {
+      if (phase === 'racing' && lastTs !== null) {
+        accumulator += Math.min(ts - lastTs, 200);
+        while (accumulator >= FIXED_DT) {
+          tickMarbles();
+          accumulator -= FIXED_DT;
+        }
+      }
+      lastTs = ts;
+      render(ts);
+      requestAnimationFrame(loop);
+    }
+
+    function render(ts) {
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.fillStyle = '#050a12';
+      ctx.fillRect(0, 0, W, H);
+
+      switch (phase) {
+        case 'lobby':
+          drawTrack();
+          drawGem(ts);
+          drawLobby();
+          break;
+
+        case 'countdown':
+          drawTrack();
+          drawGem(ts);
+          drawCountdown(ts);
+          break;
+
+        case 'temp_waiting_race_started':
+          drawTrack();
+          drawGem(ts);
+          drawMarbles();
+          ctx.font         = 'bold 28px "Press Start 2P", monospace';
+          ctx.textAlign    = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle    = '#00ffc8';
+          ctx.fillText('GET READY...', W/2, H/2);
+          break;
+
+        case 'racing':
+          drawTrack();
+          drawGem(ts);
+          drawMarbles();
+          ctx.font         = '10px "Press Start 2P", monospace';
+          ctx.textAlign    = 'right';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle    = 'rgba(255,255,255,0.25)';
+          ctx.fillText('RACE ' + currentRace + ' / ' + raceCount, W - 20, BANNER_H + 12);
+          break;
+
+        case 'results':
+          drawResults(ts);
+          break;
+
+        case 'paused':
+          drawTrack();
+          drawGem(ts);
+          drawMarbles();
+          drawPause();
+          break;
+
+        case 'game_over':
+          drawGameOver();
+          break;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    // ---- Init ----
+    resize();
+    finishCount = 0;
+    requestAnimationFrame(loop);
+
+  })();
+  </script>
+</body>
+</html>

@@ -91,6 +91,15 @@ class Game
       tv_optimised: true
     },
     {
+      slug: "marble-run",
+      title: "Marble Run",
+      creators: "Jaykill & Cooper",
+      tagline: "Pick your colour. Watch your marble race. Up to 20 players, phones as scoreboards.",
+      path: "/games/marble-run",
+      icon: "marble",
+      tv_optimised: true
+    },
+    {
       slug: "boomerang-brawl",
       title: "Boomerang Brawl",
       creators: "Az",
@@ -107,6 +116,15 @@ class Game
       tagline: "Az rides through Gumdale on his bike, getting the word out. Hit the letterbox, dodge the dog, grab a coffee for the mums and dads.",
       path: "/games/letterbox/",
       icon: "letterbox",
+      tv_optimised: true
+    },
+    {
+      slug: "dino-jump",
+      title: "Dino Jump",
+      creators: "Jaykill",
+      tagline: "4 players, one keyboard. Slate, Pixel, Fern and Echo race for the sky. Highest altitude wins.",
+      path: "/games/dino-jump.html",
+      icon: "dino-jump",
       tv_optimised: true
     },
     {

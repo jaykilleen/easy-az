@@ -34,6 +34,14 @@
       display: block;
     }
 
+    #player-blocker {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      cursor: default;
+    }
+
     /* --- Header overlay --- */
     .watch-header {
       position: fixed;
@@ -104,6 +112,14 @@
       border-color: rgba(255,255,255,0.4);
       color: #fff;
       outline: none;
+    }
+
+    .remote-focus {
+      outline: 3px solid #00ffc8 !important;
+      outline-offset: 4px;
+      background: rgba(0,255,200,0.15) !important;
+      border-color: #00ffc8 !important;
+      color: #00ffc8 !important;
     }
 
     .ch-divider {
@@ -555,6 +571,7 @@
 <div class="player-wrap">
   <div id="yt-player"></div>
 </div>
+<div id="player-blocker"></div>
 
 <header class="watch-header">
   <div class="channel-bar">
@@ -646,6 +663,31 @@
   var hudTimer     = null;
   var clockTimer   = null;
   var footer       = document.querySelector('.watch-footer');
+  var remoteFocus  = 'channels'; // 'channels' | 'header'
+  var headerIdx    = 1;          // 0 = Store, 1 = TV Guide
+
+  var HEADER_BTNS = [
+    document.querySelector('.store-link'),
+    document.querySelector('.guide-btn')
+  ];
+
+  function setHeaderFocus(idx) {
+    remoteFocus = 'header';
+    headerIdx   = idx;
+    HEADER_BTNS.forEach(function(el, i) {
+      if (el) el.classList.toggle('remote-focus', i === idx);
+    });
+  }
+
+  function clearHeaderFocus() {
+    remoteFocus = 'channels';
+    HEADER_BTNS.forEach(function(el) { if (el) el.classList.remove('remote-focus'); });
+  }
+
+  function activateHeader() {
+    if (headerIdx === 0) { window.location.href = '/'; }
+    else { openTvGuide(); clearHeaderFocus(); }
+  }
 
   // ── Scheduler ────────────────────────────────────────────────────────────
   // Each channel has a deterministic per-day shuffle of its videos. The
@@ -837,9 +879,24 @@
       return;
     }
     if (dir === 'guide') { openTvGuide(); return; }
+
+    if (remoteFocus === 'header') {
+      switch (dir) {
+        case 'left':   setHeaderFocus(0);    break;
+        case 'right':  setHeaderFocus(1);    break;
+        case 'select': activateHeader();     break;
+        case 'down':   clearHeaderFocus();   break;
+        case 'back':   clearHeaderFocus();   break;
+      }
+      return;
+    }
+
     showHud();
     switch (dir) {
-      case 'up':     changeChannel(-1);    break;
+      case 'up':
+        if (trackIdx === 0) { setHeaderFocus(1); }
+        else { changeChannel(-1); }
+        break;
       case 'down':   changeChannel(1);     break;
       case 'left':   advanceVideo(-1);     break;
       case 'right':  advanceVideo(1);      break;
@@ -857,9 +914,24 @@
       }
       return;
     }
+
+    if (remoteFocus === 'header') {
+      switch (e.key) {
+        case 'ArrowLeft':  e.preventDefault(); setHeaderFocus(0);  break;
+        case 'ArrowRight': e.preventDefault(); setHeaderFocus(1);  break;
+        case 'ArrowDown':  e.preventDefault(); clearHeaderFocus(); break;
+        case 'Enter': case ' ': e.preventDefault(); activateHeader(); break;
+        case 'Escape':     clearHeaderFocus(); break;
+      }
+      return;
+    }
+
     showHud();
     switch (e.key) {
-      case 'ArrowUp':                      e.preventDefault(); changeChannel(-1); break;
+      case 'ArrowUp':
+        e.preventDefault();
+        trackIdx === 0 ? setHeaderFocus(1) : changeChannel(-1);
+        break;
       case 'ArrowDown':                    e.preventDefault(); changeChannel(1);  break;
       case 'ArrowLeft':                    e.preventDefault(); advanceVideo(-1);  break;
       case 'ArrowRight':                   e.preventDefault(); advanceVideo(1);   break;
@@ -1239,8 +1311,11 @@
           updateDisplay();
         },
         onStateChange: function(e) {
-          if (e.data === YT.PlayerState.PLAYING) savePosition();
-          if (e.data === YT.PlayerState.ENDED)   advanceVideo(1);
+          if (e.data === YT.PlayerState.PLAYING) { savePosition(); document.getElementById('player-blocker').style.display = 'none'; }
+          if (e.data === YT.PlayerState.ENDED) {
+            document.getElementById('player-blocker').style.display = 'block';
+            advanceVideo(1);
+          }
         },
         onError: function() {
           setTimeout(function() { advanceVideo(1); }, 1500);

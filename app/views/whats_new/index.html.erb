@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0a12">
+  <title>What's New — EZ-AZ</title>
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      background: #0a0a12;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .store-banner {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: rgba(10,10,18,0.96);
+      border-bottom: 1px solid rgba(0,255,200,0.12);
+      backdrop-filter: blur(8px);
+    }
+
+    .store-banner-link {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.7rem;
+      color: #00ffc8;
+      letter-spacing: 0.06em;
+    }
+    .store-banner-link:hover { color: #fff; }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    .page-heading {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: #00ffc8;
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: 0.06em;
+    }
+
+    .page-sub {
+      text-align: center;
+      color: #555;
+      font-size: 0.85rem;
+      margin-bottom: 48px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #444;
+      font-size: 0.9rem;
+      padding: 60px 0;
+    }
+
+    .entry {
+      display: flex;
+      gap: 20px;
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .entry:last-child { border-bottom: none; }
+
+    .entry-emoji {
+      font-size: 2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .entry-body { flex: 1; min-width: 0; }
+
+    .entry-date {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      color: #444;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .entry-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .entry-body-text {
+      font-size: 0.9rem;
+      color: #888;
+      line-height: 1.65;
+    }
+  </style>
+</head>
+<body>
+
+<header class="store-banner">
+  <a href="/" class="store-banner-link">← EZ-AZ</a>
+  <span style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:#555;letter-spacing:0.08em;">WHAT'S NEW</span>
+</header>
+
+<main class="page">
+  <h1 class="page-heading">What's New</h1>
+  <p class="page-sub">Updates, new games, and improvements from the store.</p>
+
+  <% if @announcements.empty? %>
+    <p class="empty">Nothing posted yet — check back soon.</p>
+  <% else %>
+    <% @announcements.each do |a| %>
+      <div class="entry">
+        <div class="entry-emoji"><%= a.emoji.presence || '📣' %></div>
+        <div class="entry-body">
+          <div class="entry-date"><%= a.published_at.strftime("%-d %B %Y").upcase %></div>
+          <div class="entry-title"><%= a.title %></div>
+          <div class="entry-body-text"><%= simple_format(a.body) %></div>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</main>
+
+</body>
+</html>

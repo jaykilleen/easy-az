@@ -80,6 +80,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get "/whats-new", to: "whats_new#index"
+
   get "/code",     to: "code#index"
   get "/code/view", to: "code#show"
 

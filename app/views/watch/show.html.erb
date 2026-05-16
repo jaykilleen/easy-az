@@ -435,7 +435,14 @@
       z-index: 5;
       background: rgba(5,5,12,0.98);
       border-right: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.12s;
     }
+    .epg-ch-row.epg-focused .epg-ch-cell {
+      background: rgba(0,255,200,0.08);
+      border-right-color: #00ffc8;
+    }
+    .epg-ch-row.epg-focused .epg-ch-name { color: #00ffc8; }
+    .epg-ch-row.epg-focused .epg-ch-num  { color: #00ffc8; }
     .epg-ch-num {
       font-family: 'Press Start 2P', monospace;
       font-size: 0.45rem;
@@ -875,7 +882,15 @@
 
   function handleNav(dir) {
     if (isGuideOpen()) {
-      if (dir === 'back' || dir === 'guide') closeTvGuide();
+      var scroll = document.getElementById('epgScroll');
+      switch (dir) {
+        case 'up':     setEpgFocus(epgFocusRow - 1); break;
+        case 'down':   setEpgFocus(epgFocusRow + 1); break;
+        case 'left':   if (scroll) scroll.scrollBy({ left: -(30 * PX_PER_MIN), behavior: 'smooth' }); break;
+        case 'right':  if (scroll) scroll.scrollBy({ left:  (30 * PX_PER_MIN), behavior: 'smooth' }); break;
+        case 'select': epgTuneToFocused(); break;
+        case 'back': case 'guide': closeTvGuide(); break;
+      }
       return;
     }
     if (dir === 'guide') { openTvGuide(); return; }
@@ -909,8 +924,20 @@
 
   document.addEventListener('keydown', function(e) {
     if (isGuideOpen()) {
-      if (e.key === 'g' || e.key === 'G' || e.key === 'Escape') {
-        e.preventDefault(); closeTvGuide();
+      var scroll = document.getElementById('epgScroll');
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault(); setEpgFocus(epgFocusRow - 1); break;
+        case 'ArrowDown':
+          e.preventDefault(); setEpgFocus(epgFocusRow + 1); break;
+        case 'ArrowLeft':
+          e.preventDefault(); if (scroll) scroll.scrollBy({ left: -(30 * PX_PER_MIN), behavior: 'smooth' }); break;
+        case 'ArrowRight':
+          e.preventDefault(); if (scroll) scroll.scrollBy({ left:  (30 * PX_PER_MIN), behavior: 'smooth' }); break;
+        case 'Enter': case ' ':
+          e.preventDefault(); epgTuneToFocused(); break;
+        case 'g': case 'G': case 'Escape':
+          e.preventDefault(); closeTvGuide(); break;
       }
       return;
     }
@@ -957,6 +984,7 @@
     document.getElementById('tvGuide').classList.add('visible');
     document.getElementById('tvGuide').setAttribute('aria-hidden', 'false');
     scrollEpgToNow();
+    setEpgFocus(trackIdx);
     if (clockTimer) clearInterval(clockTimer);
     clockTimer = setInterval(function() {
       var el = document.getElementById('tvGuideClock');
@@ -1036,6 +1064,7 @@
   var CH_HEIGHT    = 160;
   var EPG_BUFFER   = 30;
   var epgDate      = null;
+  var epgFocusRow  = 0;
 
   function dayKeyForDate(date) {
     var start = new Date(date.getFullYear(), 0, 0);
@@ -1077,6 +1106,22 @@
       idx++;
     }
     return { slots: slots, openMin: openMin, closeMin: closeMin };
+  }
+
+  function setEpgFocus(idx) {
+    epgFocusRow = Math.max(0, Math.min(idx, tracks.length - 1));
+    document.querySelectorAll('.epg-ch-row').forEach(function(el, i) {
+      el.classList.toggle('epg-focused', i === epgFocusRow);
+    });
+    var rows = document.querySelectorAll('.epg-ch-row');
+    if (rows[epgFocusRow]) {
+      rows[epgFocusRow].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function epgTuneToFocused() {
+    selectChannel(epgFocusRow);
+    closeTvGuide();
   }
 
   function buildDayTabs() {
@@ -1168,15 +1213,19 @@
       row.className = 'epg-ch-row';
       row.style.height = CH_HEIGHT + 'px';
 
-      // Channel label (sticky left)
+      // Channel label (sticky left) — click to tune
       var cell = document.createElement('div');
       cell.className = 'epg-ch-cell';
+      cell.style.cursor = 'pointer';
       cell.innerHTML =
         '<div class="epg-ch-num">CH ' + String(ri + 1).padStart(2, '0') + '</div>' +
         '<div class="epg-ch-inner">' +
           '<span class="epg-ch-emoji">' + track.emoji + '</span>' +
           '<span class="epg-ch-name">' + escapeHtml(track.title) + '</span>' +
         '</div>';
+      cell.addEventListener('click', (function(idx) {
+        return function() { selectChannel(idx); closeTvGuide(); };
+      }(ri)));
       row.appendChild(cell);
 
       // Row content (program blocks + off zones)

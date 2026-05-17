@@ -36,7 +36,7 @@
   </style>
 </head>
 <body>
-  <div class="store-banner"><a href="/">EZ-AZ</a></div>
+  <div class="store-banner"><a href="/" tabindex="-1">EZ-AZ</a></div>
   <canvas id="gameCanvas"></canvas>
 
   <script>
@@ -1246,6 +1246,8 @@
     }
 
     document.addEventListener('keydown', function (e) {
+      var handled = false;
+
       // Pause / resume
       if (e.key === 'Escape') {
         if (phase === 'paused') {
@@ -1254,27 +1256,32 @@
           phaseBeforePause = phase;
           phase = 'paused';
         }
-        return;
+        handled = true;
       }
       // Quit from pause
-      if (e.key === 'q' || e.key === 'Q') {
-        if (phase === 'paused') { window.location.href = '/'; }
-        return;
+      else if (e.key === 'q' || e.key === 'Q') {
+        if (phase === 'paused') { window.location.href = (document.referrer.includes('/tv') ? '/tv' : '/'); }
+        handled = true;
       }
-
-      if (phase === 'lobby') {
-        if (e.key === 'ArrowLeft')  { raceCount = Math.max(1, raceCount - 1); }
-        if (e.key === 'ArrowRight') { raceCount = Math.min(20, raceCount + 1); }
-        if (e.key === 'ArrowUp')    { botCount  = Math.min(20, botCount + 1); }
-        if (e.key === 'ArrowDown')  { botCount  = Math.max(0, botCount - 1); }
-        if (e.key === 'Enter' && (players.length + botCount) >= 2) {
-          initAudio();
-          sub.send('start_series', { race_count: raceCount, bot_count: botCount });
+      else if (phase === 'lobby') {
+        if (e.key === 'ArrowLeft')  { raceCount = Math.max(1, raceCount - 1); handled = true; }
+        if (e.key === 'ArrowRight') { raceCount = Math.min(20, raceCount + 1); handled = true; }
+        if (e.key === 'ArrowUp')    { botCount  = Math.min(20, botCount + 1);  handled = true; }
+        if (e.key === 'ArrowDown')  { botCount  = Math.max(0, botCount - 1);   handled = true; }
+        if (e.key === 'Enter' || e.key === ' ') {
+          handled = true;
+          if (players.length + botCount >= 2) {
+            initAudio();
+            sub.send('start_series', { race_count: raceCount, bot_count: botCount });
+          }
         }
       }
-      if (e.key === 'Enter' && phase === 'game_over') {
+      else if ((e.key === 'Enter' || e.key === ' ') && phase === 'game_over') {
         location.reload();
+        handled = true;
       }
+
+      if (handled) e.preventDefault();
     });
 
     // ---- Main loop (fixed-timestep physics, variable-rate render) ----
